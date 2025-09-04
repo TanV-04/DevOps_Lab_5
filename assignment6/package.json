@@ -1,0 +1,12 @@
+{
+  "name": "social-media-app",
+  "version": "1.0.0",
+  "description": "Basic social media application",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

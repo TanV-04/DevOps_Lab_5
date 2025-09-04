@@ -1,5 +1,9 @@
 pipeline {
   agent any
+  environment {
+    IMAGE_NAME = "flask-app"
+    DOCKERHUB_REPO = "your-dockerhub/${IMAGE_NAME}"
+  }
   stages {
     stage('Checkout') {
       steps {
@@ -8,18 +12,29 @@ pipeline {
     }
     stage('Build') {
       steps {
-        sh 'docker build -t flask-app .'
+        script {
+          dockerImage = docker.build("${IMAGE_NAME}")
+        }
       }
     }
     stage('Test') {
       steps {
-        sh 'docker run --rm -d -p 5000:5000 flask-app'
+        script {
+          dockerImage.inside {
+            sh 'python app.py &'
+            sleep 10
+            sh 'curl http://localhost:5000'
+          }
+        }
       }
     }
     stage('Push') {
       steps {
-        sh 'docker tag flask-app your-dockerhub/flask-app:latest'
-        sh 'docker push your-dockerhub/flask-app:latest'
+        script {
+          docker.withRegistry('', 'dockerhub-credentials') {
+            dockerImage.push('latest')
+          }
+        }
       }
     }
   }
