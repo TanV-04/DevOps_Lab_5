@@ -1,7 +1,0 @@
-common annotations
-- @Component: generic bean
-- @Service: business logic layer
-- @Repository: Data access layer
-- @Controller: MVC controller
-- @RestController: REST controller
-- @Autowired: dependency injection

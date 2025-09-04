@@ -1,0 +1,14 @@
+# trivy.yaml
+format: table
+output: retail-app-scan-report.txt
+severity:
+  - HIGH
+  - CRITICAL
+vuln-type:
+  - os
+  - library
+scanners:
+  - vuln
+  - secret
+ignore-unfixed: true
+exit-code: 1

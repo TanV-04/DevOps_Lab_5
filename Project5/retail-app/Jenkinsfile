@@ -1,0 +1,12 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Security Scan') {
+            steps {
+                // Make sure Docker and Trivy are available
+                bat 'powershell -ExecutionPolicy Bypass -File scan-script.ps1'
+            }
+        }
+    }
+}
