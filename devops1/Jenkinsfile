@@ -4,7 +4,7 @@ pipeline {
     environment {
         APP_NAME = 'flask-demo'
         IMAGE = "${env.DOCKERHUB_USER ?: 'local'}/${APP_NAME}"
-        TAG = "${env.BUILD_NUMBER}"
+        TAG   = "${env.BUILD_NUMBER}"
     }
 
     stages {
@@ -16,34 +16,62 @@ pipeline {
 
         stage('Unit Tests') {
             steps {
-                sh 'python3 --version || true'
-                sh 'pip3 --version || true'
-                sh 'python3 -m venv .venv'
-                sh '. .venv/bin/activate && python -m pip install --upgrade pip'
-                sh '. .venv/bin/activate && pip install -r requirements.txt'
-                sh '. .venv/bin/activate && python -m pytest -q'
+                sh '''
+                  set -euxo pipefail
+                  python3 --version || true
+                  pip3 --version || true
+
+                  # Install deps into Jenkins user site-packages (no sudo, no venv needed)
+                  python3 -m pip install --user --upgrade pip
+                  if [ -f requirements.txt ]; then
+                    python3 -m pip install --user -r requirements.txt
+                  fi
+                  # Ensure pytest is present
+                  python3 -m pip install --user -U pytest
+
+                  # Make sure user-installed scripts are on PATH
+                  export PATH="$HOME/.local/bin:$PATH"
+
+                  # Run tests
+                  python3 -m pytest -q
+                '''
             }
         }
 
         stage('Build Image') {
             steps {
-                sh "docker build -t ${IMAGE}:${TAG} ."
-                sh "docker tag ${IMAGE}:${TAG} ${IMAGE}:latest"
+                sh """
+                  set -euxo pipefail
+                  docker build -t ${IMAGE}:${TAG} .
+                  docker tag ${IMAGE}:${TAG} ${IMAGE}:latest
+                """
             }
         }
 
         stage('Deploy (Run Container)') {
             steps {
-                sh 'docker rm -f demo || true'
-                sh "docker run -d --name demo -p 5000:5000 ${IMAGE}:latest"
+                sh """
+                  set -euxo pipefail
+                  docker rm -f demo || true
+                  docker run -d --name demo -p 5000:5000 ${IMAGE}:latest
+                """
             }
         }
 
         stage('Smoke Test') {
             steps {
-                sh 'sleep 5'
-                sh 'curl -fsS http://localhost:5000/ | tee smoke.json'
+                sh '''
+                  set -euxo pipefail
+                  sleep 5
+                  curl -fsS http://localhost:5000/ | tee smoke.json
+                '''
             }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'smoke.json', onlyIfSuccessful: false
         }
     }
 }
