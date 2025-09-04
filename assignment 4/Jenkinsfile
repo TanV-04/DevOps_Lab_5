@@ -1,0 +1,41 @@
+pipeline {
+    agent none
+
+    stages {
+        stage('Compile') {
+            agent {
+                label 'slave1'
+            }
+            steps {
+                script {
+                    // Assuming Maven is installed on the slave node
+                    sh 'mvn clean compile'
+                }
+            }
+        }
+
+        stage('Test') {
+            agent {
+                label 'slave2'
+            }
+            steps {
+                script {
+                    // Assuming Maven is installed on the slave node
+                    sh 'mvn test'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline completed'
+        }
+        success {
+            echo 'Pipeline succeeded'
+        }
+        failure {
+            echo 'Pipeline failed'
+        }
+    }
+}
