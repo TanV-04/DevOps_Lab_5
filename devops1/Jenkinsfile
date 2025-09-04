@@ -39,6 +39,7 @@ stage('Unit Tests') {
     stage('Build Image') {
       steps {
         sh """
+          #!/bin/bash
           set -euxo pipefail
           docker build -t ${IMAGE}:${TAG} .
           docker tag ${IMAGE}:${TAG} ${IMAGE}:latest
@@ -49,6 +50,7 @@ stage('Unit Tests') {
     stage('Deploy (Run Container)') {
       steps {
         sh """
+          #!/bin/bash
           set -euxo pipefail
           docker rm -f demo || true
           docker run -d --name demo -p 5000:5000 ${IMAGE}:latest
@@ -59,6 +61,7 @@ stage('Unit Tests') {
     stage('Smoke Test') {
       steps {
         sh '''
+          #!/bin/bash
           set -euxo pipefail
           # On Docker Desktop (Windows/Mac), containers reach host via host.docker.internal
           # Fallback to 127.0.0.1 if needed.
