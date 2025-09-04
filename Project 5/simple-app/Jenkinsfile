@@ -1,0 +1,182 @@
+pipeline {
+    agent any
+    
+    environment {
+        IMAGE_NAME = 'simple-app'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+        TRIVY_PATH = 'C:\\Users\\Atharva\\Downloads\\trivy_0.66.0_windows-64bit\\trivy.exe'
+        APP_PORT = '8082'
+    }
+    
+    stages {
+        stage('🔄 Checkout') {
+            steps {
+                echo 'Checking out source code...'
+                checkout scm
+            }
+        }
+        
+        stage('🏗️ Build Application') {
+            steps {
+                echo 'Building Spring Boot application...'
+                bat 'mvnw.cmd clean package -DskipTests'
+                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+            }
+        }
+        
+        stage('🐳 Build Docker Image') {
+            steps {
+                echo 'Building Docker image...'
+                script {
+                    bat "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                    bat "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest"
+                }
+            }
+        }
+        
+        stage('🔍 Trivy Security Scan') {
+            parallel {
+                stage('Vulnerability Scan') {
+                    steps {
+                        script {
+                            bat 'if not exist "trivy-reports" mkdir trivy-reports'
+                            bat """
+                                "${TRIVY_PATH}" image --format json --output trivy-reports/vulnerability-report-${BUILD_NUMBER}.json ${IMAGE_NAME}:latest
+                            """
+                        }
+                    }
+                }
+                stage('Secret Scan') {
+                    steps {
+                        script {
+                            bat """
+                                "${TRIVY_PATH}" image --scanners secret --format json --output trivy-reports/secret-report-${BUILD_NUMBER}.json ${IMAGE_NAME}:latest || echo "No secrets found"
+                            """
+                        }
+                    }
+                }
+                stage('Configuration Scan') {
+                    steps {
+                        script {
+                            bat """
+                                "${TRIVY_PATH}" image --scanners config --format json --output trivy-reports/config-report-${BUILD_NUMBER}.json ${IMAGE_NAME}:latest || echo "No config issues found"
+                            """
+                        }
+                    }
+                }
+            }
+            post {
+                always {
+                    // Archive all scan reports
+                    archiveArtifacts artifacts: 'trivy-reports/*.json', fingerprint: true
+                    
+                    // Display summary
+                    script {
+                        bat """
+                            echo "=== SECURITY SCAN SUMMARY ==="
+                            "${TRIVY_PATH}" image --format table --severity HIGH,CRITICAL ${IMAGE_NAME}:latest || echo "No high/critical vulnerabilities"
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('🧪 Security Gate') {
+            steps {
+                echo 'Checking security gate...'
+                script {
+                    try {
+                        // Fail build if critical vulnerabilities found
+                        bat """
+                            "${TRIVY_PATH}" image --severity CRITICAL --exit-code 1 --format table ${IMAGE_NAME}:latest
+                        """
+                        echo '✅ Security gate passed - No critical vulnerabilities'
+                    } catch (Exception e) {
+                        error '❌ Security gate failed - Critical vulnerabilities found!'
+                    }
+                }
+            }
+        }
+        
+        stage('🧪 Container Test') {
+            steps {
+                echo 'Testing Docker container...'
+                script {
+                    // Run container for testing
+                    bat "docker run -d -p 8083:8082 --name test-container-${BUILD_NUMBER} ${IMAGE_NAME}:latest"
+                    
+                    // Wait for startup
+                    sleep(30)
+                    
+                    // Test endpoints
+                    bat """
+                        curl -f http://localhost:8083/ || exit 1
+                        curl -f http://localhost:8083/health || exit 1
+                    """
+                    
+                    echo '✅ Container tests passed'
+                }
+            }
+            post {
+                always {
+                    // Cleanup test container
+                    bat "docker stop test-container-${BUILD_NUMBER} || echo 'Container already stopped'"
+                    bat "docker rm test-container-${BUILD_NUMBER} || echo 'Container already removed'"
+                }
+            }
+        }
+        
+        stage('🚀 Deploy') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                }
+            }
+            steps {
+                echo 'Deploying application...'
+                script {
+                    // Stop existing production container
+                    bat """
+                        docker stop simple-app-prod || echo "No existing container"
+                        docker rm simple-app-prod || echo "No existing container"
+                    """
+                    
+                    // Deploy new version
+                    bat """
+                        docker run -d -p ${APP_PORT}:8082 --name simple-app-prod --restart unless-stopped ${IMAGE_NAME}:latest
+                    """
+                    
+                    // Health check
+                    sleep(30)
+                    bat "curl -f http://localhost:${APP_PORT}/health"
+                    
+                    echo "✅ Deployment successful!"
+                    echo "🌐 Application: http://localhost:${APP_PORT}"
+                    echo "💚 Health: http://localhost:${APP_PORT}/health"
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo '🧹 Cleaning up...'
+            // Clean up unused images
+            bat "docker image prune -f || echo 'No images to prune'"
+        }
+        success {
+            echo '✅ Pipeline completed successfully!'
+            script {
+                if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') {
+                    echo "🎉 Production deployment successful!"
+                    echo "📊 Check Trivy reports for security details"
+                }
+            }
+        }
+        failure {
+            echo '❌ Pipeline failed!'
+            echo '🔍 Check Trivy reports for security issues'
+        }
+    }
+}
