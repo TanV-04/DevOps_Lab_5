@@ -18,48 +18,48 @@ pipeline {
             steps {
                 echo 'Building the application...'
                 dir('app') {
-                    bat 'npm install'
+                    sh 'npm install'
                 }
             }
         }
-        
+
         stage('Run Tests') {
             steps {
                 echo 'Running tests...'
                 dir('app') {
-                    bat 'npm test'
+                    sh 'npm test'
                 }
             }
         }
-        
+
         stage('Build Docker Image') {
             steps {
                 echo 'Building Docker image...'
                 script {
                     dir('app') {
-                        bat "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
-                        bat "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
+                        sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                        sh "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
                     }
                 }
             }
         }
-        
+
         stage('Deploy') {
             steps {
                 echo 'Deploying application...'
-                
-                powershell '''
+
+                sh '''
                     # Stop and remove existing container (ignore errors)
-                    try { docker stop sample-app-container } catch { Write-Host "Container not running" }
-                    try { docker rm sample-app-container } catch { Write-Host "Container not found" }
-                    
+                    docker stop sample-app-container || true
+                    docker rm sample-app-container || true
+
                     # Deploy new container
-                    docker run -d --name sample-app-container -p 3000:3000 sample-app:$env:BUILD_NUMBER
-                    
+                    docker run -d --name sample-app-container -p 3000:3000 sample-app:$BUILD_NUMBER
+
                     # Verify deployment
-                    Start-Sleep -Seconds 2
-                    docker ps | Where-Object { $_ -match "sample-app-container" }
-                    Write-Host "Deployment completed successfully!"
+                    sleep 2
+                    docker ps | grep sample-app-container
+                    echo "Deployment completed successfully!"
                 '''
             }
         }
