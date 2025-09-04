@@ -3,9 +3,8 @@ pipeline {
 
     environment {
         APP_NAME = 'flask-demo'
-        IMAGE = "${env.DOCKERHUB_USER ?: 'your-dockerhub-username'}/${APP_NAME}"
+        IMAGE = "${env.DOCKERHUB_USER ?: 'local'}/${APP_NAME}"
         TAG = "${env.BUILD_NUMBER}"
-        DOCKER_HOST = 'tcp://dind:2375'
     }
 
     stages {
@@ -17,45 +16,33 @@ pipeline {
 
         stage('Unit Tests') {
             steps {
-                dir('app') {
-                    sh 'python3 --version || true'
-                    sh 'pip3 --version || true'
-                    sh 'pip3 install -r requirements.txt'
-                    sh 'python3 -m pytest -q'
-                }
+                sh 'python3 --version || true'
+                sh 'pip3 --version || true'
+                sh 'python3 -m venv .venv'
+                sh '. .venv/bin/activate && python -m pip install --upgrade pip'
+                sh '. .venv/bin/activate && pip install -r requirements.txt'
+                sh '. .venv/bin/activate && python -m pytest -q'
             }
         }
 
         stage('Build Image') {
             steps {
-                dir('app') {
-                    script {
-                        docker.withServer(env.DOCKER_HOST) {
-                            def built = docker.build("${IMAGE}:${TAG}")
-                            built.push()
-                            sh "docker tag ${IMAGE}:${TAG} ${IMAGE}:latest"
-                            sh "docker push ${IMAGE}:latest"
-                        }
-                    }
-                }
+                sh "docker build -t ${IMAGE}:${TAG} ."
+                sh "docker tag ${IMAGE}:${TAG} ${IMAGE}:latest"
             }
         }
 
         stage('Deploy (Run Container)') {
             steps {
-                script {
-                    docker.withServer(env.DOCKER_HOST) {
-                        sh 'docker rm -f demo || true'
-                        sh "docker run -d --name demo -p 8000:8000 ${IMAGE}:latest"
-                    }
-                }
+                sh 'docker rm -f demo || true'
+                sh "docker run -d --name demo -p 5000:5000 ${IMAGE}:latest"
             }
         }
 
         stage('Smoke Test') {
             steps {
                 sh 'sleep 5'
-                sh 'curl -fsS http://localhost:8000/ | tee smoke.json'
+                sh 'curl -fsS http://localhost:5000/ | tee smoke.json'
             }
         }
     }

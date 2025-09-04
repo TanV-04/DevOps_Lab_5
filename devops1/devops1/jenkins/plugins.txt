@@ -1,8 +1,0 @@
-configuration-as-code
-workflow-aggregator
-docker-workflow
-git
-credentials
-blueocean
-pipeline-github-lib
-ansicolor

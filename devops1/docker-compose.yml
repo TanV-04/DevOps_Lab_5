@@ -1,37 +1,8 @@
 version: "3.9"
-
 services:
-  jenkins:
-    build: ./jenkins
-    container_name: jenkins
+  web:
+    build: .
+    container_name: flask-app-jenkins-dockerized
     ports:
-      - "8080:8080"
-      - "50000:50000"
-    environment:
-      DOCKER_HOST: tcp://dind:2375
-      JENKINS_ADMIN_ID: admin
-      JENKINS_ADMIN_PASSWORD: admin1234
-    volumes:
-      - jenkins_home:/var/jenkins_home
-    depends_on:
-      - dind
-
-  dind:
-    image: docker:26-dind
-    container_name: dind
-    privileged: true
-    environment:
-      DOCKER_TLS_CERTDIR: ""
-    ports:
-      - "2375:2375"
-
-  app:
-    build: ./app
-    container_name: flask-app
-    ports:
-      - "8000:8000"
-    depends_on:
-      - dind
-
-volumes:
-  jenkins_home:
+      - "5000:5000"
+    restart: always

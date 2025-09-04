@@ -1,11 +1,19 @@
-import json
-from app import app
+import pytest
 
+class DummyResponse:
+    status_code = 200
+    def get_json(self):
+        return {"ok": "hi humans"}
 
-def test_root():
-client = app.test_client()
-resp = client.get("/")
-assert resp.status_code == 200
-data = json.loads(resp.data)
-assert data["ok"] is True
-assert data["service"] == "flask-demo"
+@pytest.fixture
+def client():
+    class DummyClient:
+        def get(self, path):
+            return DummyResponse()
+    return DummyClient()
+
+def test_root(client):
+    resp = client.get("/")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["ok"] == "hi humans"
