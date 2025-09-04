@@ -19,9 +19,11 @@ stage('Unit Tests') {
   steps {
     sh '''
       set -euxo pipefail
+      # Run tests in a clean Python 3.13 container using the same jenkins_home volume
       docker run --rm \
         -v jenkins_home:/var/jenkins_home \
         -w "$WORKSPACE" \
+        -e PIP_DISABLE_PIP_VERSION_CHECK=1 \
         python:3.13-slim \
         bash -lc '
           python3 -m pip install -U pip &&
