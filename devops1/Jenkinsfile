@@ -1,75 +1,82 @@
 pipeline {
-    agent any
+  agent any
 
-    environment {
-        APP_NAME = 'flask-demo'
-        IMAGE = "${env.DOCKERHUB_USER ?: 'local'}/${APP_NAME}"
-        TAG   = "${env.BUILD_NUMBER}"
+  environment {
+    APP_NAME = 'flask-demo'
+    IMAGE = "${env.DOCKERHUB_USER ?: 'local'}/${APP_NAME}"
+    TAG   = "${env.BUILD_NUMBER}"
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
     }
 
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
+    // Run tests inside a clean Python 3.13 container
+    stage('Unit Tests') {
+      agent {
+        docker {
+          image 'python:3.13-slim'
+          args '-u'
         }
-
-        // >>> THIS STAGE RUNS IN A CONTAINER, NOT ON THE HOST <<<
-        stage('Unit Tests') {
-            agent {
-                docker {
-                    image 'python:3.13-slim'
-                    args '-u'   // unbuffered output
-                }
-            }
-            steps {
-                sh '''
-                  set -euxo pipefail
-                  python3 --version
-                  python3 -m pip install --upgrade pip
-                  if [ -f requirements.txt ]; then
-                    python3 -m pip install -r requirements.txt
-                  fi
-                  python3 -m pip install -U pytest
-                  python3 -m pytest -q
-                '''
-            }
-        }
-
-        stage('Build Image') {
-            steps {
-                sh """
-                  set -euxo pipefail
-                  docker build -t ${IMAGE}:${TAG} .
-                  docker tag ${IMAGE}:${TAG} ${IMAGE}:latest
-                """
-            }
-        }
-
-        stage('Deploy (Run Container)') {
-            steps {
-                sh """
-                  set -euxo pipefail
-                  docker rm -f demo || true
-                  docker run -d --name demo -p 5000:5000 ${IMAGE}:latest
-                """
-            }
-        }
-
-        stage('Smoke Test') {
-            steps {
-                sh '''
-                  set -euxo pipefail
-                  sleep 5
-                  curl -fsS http://localhost:5000/ | tee smoke.json
-                '''
-            }
-        }
+      }
+      steps {
+        sh '''
+          set -euxo pipefail
+          python3 --version
+          python3 -m pip install --upgrade pip
+          [ -f requirements.txt ] && python3 -m pip install -r requirements.txt || true
+          python3 -m pip install -U pytest
+          python3 -m pytest -q
+        '''
+      }
     }
 
-    post {
-        always {
-            archiveArtifacts artifacts: 'smoke.json', onlyIfSuccessful: false
-        }
+    stage('Build Image') {
+      steps {
+        sh """
+          set -euxo pipefail
+          docker build -t ${IMAGE}:${TAG} .
+          docker tag ${IMAGE}:${TAG} ${IMAGE}:latest
+        """
+      }
     }
+
+    stage('Deploy (Run Container)') {
+      steps {
+        sh """
+          set -euxo pipefail
+          docker rm -f demo || true
+          docker run -d --name demo -p 5000:5000 ${IMAGE}:latest
+        """
+      }
+    }
+
+    stage('Smoke Test') {
+      steps {
+        sh '''
+          set -euxo pipefail
+          # On Docker Desktop (Windows/Mac), containers reach host via host.docker.internal
+          # Fallback to 127.0.0.1 if needed.
+          for url in "http://host.docker.internal:5000/" "http://127.0.0.1:5000/"; do
+            echo "Trying $url"
+            if curl -fsS "$url" | tee smoke.json; then
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Smoke test failed: app didn't respond on port 5000" >&2
+          exit 1
+        '''
+      }
+    }
+  }
+
+  post {
+    always {
+      archiveArtifacts artifacts: 'smoke.json', onlyIfSuccessful: false
+    }
+  }
 }
