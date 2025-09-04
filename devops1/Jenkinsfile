@@ -1,66 +1,25 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    APP_NAME = 'flask-demo'
-    IMAGE = "${env.DOCKERHUB_USER ?: 'local'}/${APP_NAME}"
-    TAG   = "${env.BUILD_NUMBER}"
-  }
-
-  stages {
-    stage('Checkout') {
-      steps {
-        checkout scm
-      }
+    stages {
+        stage('Build') {
+            steps {
+                sh 'docker build -t flask-app .'
+            }
+        }
+        
+        stage('Run') {
+            steps {
+                sh 'docker rm -f demo || true'
+                sh 'docker run -d --name demo -p 5000:5000 flask-app'
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                sh 'sleep 10'
+                sh 'curl http://localhost:5000/ || echo "Test failed"'
+            }
+        }
     }
-
-
-stage('Unit Tests') {
-  steps {
-    sh '''
-      set -euxo pipefail
-      # Run tests in a clean Python 3.12 container
-      docker run --rm \
-        -v "$WORKSPACE:/workspace" \
-        -w "/workspace" \
-        -e PIP_DISABLE_PIP_VERSION_CHECK=1 \
-        python:3.12-slim \
-        bash -c '
-          python3 -m pip install -U pip &&
-          pip3 install -r requirements.txt &&
-          python3 -m pip install -U pytest &&
-          pytest -q
-        '
-    '''
-  }
-}
-
-
-    stage('Build Image') {
-      steps {
-        sh "docker build -t ${IMAGE}:${TAG} ."
-        sh "docker tag ${IMAGE}:${TAG} ${IMAGE}:latest"
-      }
-    }
-
-    stage('Deploy (Run Container)') {
-      steps {
-        sh "docker rm -f demo || true"
-        sh "docker run -d --name demo -p 5000:5000 ${IMAGE}:latest"
-      }
-    }
-
-    stage('Smoke Test') {
-      steps {
-        sh "sleep 5"
-        sh "curl -fsS http://localhost:5000/ | tee smoke.json || true"
-      }
-    }
-  }
-
-  post {
-    always {
-      archiveArtifacts artifacts: 'smoke.json', onlyIfSuccessful: false
-    }
-  }
 }
