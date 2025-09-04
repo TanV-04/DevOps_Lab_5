@@ -15,24 +15,24 @@ pipeline {
     }
 
     // Run tests inside a clean Python 3.13 container
-    stage('Unit Tests') {
-    agent {
-        docker {
-        image 'python:3.13-slim'   // <— no trailing space, straight quotes
-        args '-u'
-        }
-    }
-    steps {
-        sh '''
-        set -euxo pipefail
-        python3 --version
-        python3 -m pip install --upgrade pip
-        [ -f requirements.txt ] && python3 -m pip install -r requirements.txt || true
-        python3 -m pip install -U pytest
-        python3 -m pytest -q
-        '''
-    }
-    }
+stage('Unit Tests') {
+  steps {
+    sh '''
+      set -euxo pipefail
+      docker run --rm \
+        -v jenkins_home:/var/jenkins_home \
+        -w "$WORKSPACE" \
+        python:3.13-slim \
+        bash -lc '
+          python3 -m pip install -U pip &&
+          [ -f requirements.txt ] && pip3 install -r requirements.txt || true &&
+          python3 -m pip install -U pytest &&
+          pytest -q
+        '
+    '''
+  }
+}
+
 
     stage('Build Image') {
       steps {
