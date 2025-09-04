@@ -14,10 +14,10 @@ spec:
     spec:
       containers:
       - name: social-app
-        image: social-media-app
-        imagePullPolicy: Never
+        image: social-media-app:latest
+        imagePullPolicy: Never  # Changed from Always to Never (use local image)
         ports:
-        - containerPort: 8081  # Change from 5000 to 8081
+        - containerPort: 8081
         resources:
           requests:
             cpu: 100m
