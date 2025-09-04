@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: angular-dev
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./test:/usr/src/app       # bind mount Angular app for live editing
+      - /usr/src/app/node_modules # keep node_modules inside container
+    environment:
+      - CHOKIDAR_USEPOLLING=true  # helps file watching on some OS setups
+    command: npm run start -- --poll=2000 --host 0.0.0.0

@@ -1,0 +1,18 @@
+# syntax=docker/dockerfile:1
+FROM node:20-alpine
+
+WORKDIR /usr/src/app
+
+# Only copy package files first to leverage caching
+COPY test/package*.json ./
+
+RUN npm ci
+
+# Copy the rest of the Angular source
+COPY test/ .
+
+# Expose Angular dev server
+EXPOSE 4200
+
+# Default command for dev
+CMD ["npm", "run", "start", "--", "--host", "0.0.0.0"]

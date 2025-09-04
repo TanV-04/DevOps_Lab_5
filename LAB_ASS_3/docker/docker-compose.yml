@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  jenkins-master:
+    image: jenkins/jenkins:2.401.3-lts
+    container_name: jenkins-master
+    hostname: jenkins-master
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    environment:
+      - JENKINS_OPTS=--httpPort=8080
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - ./jenkins-master/plugins.txt:/usr/share/jenkins/ref/plugins.txt
+      - ./jenkins-master/init.groovy.d:/usr/share/jenkins/ref/init.groovy.d
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - jenkins-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  jenkins-slave-compile:
+    build:
+      context: .
+      dockerfile: jenkins-slave/Dockerfile
+      args:
+        - NODE_TYPE=compile
+    container_name: jenkins-slave-compile
+    hostname: jenkins-slave-compile
+    environment:
+      - JENKINS_MASTER_URL=http://jenkins-master:8080
+      - JENKINS_SLAVE_NAME=compile-node
+      - JENKINS_SLAVE_LABELS=compile-node maven java
+      - JENKINS_SLAVE_MODE=NORMAL
+      - JENKINS_SLAVE_EXECUTORS=2
+      - JAVA_OPTS=-Xmx1024m
+    volumes:
+      - jenkins_slave_compile_workspace:/home/jenkins/workspace
+      - maven_repo_compile:/home/jenkins/.m2
+    networks:
+      - jenkins-network
+    depends_on:
+      jenkins-master:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "slave.jar"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  jenkins-slave-test:
+    build:
+      context: .
+      dockerfile: jenkins-slave/Dockerfile
+      args:
+        - NODE_TYPE=test
+    container_name: jenkins-slave-test
+    hostname: jenkins-slave-test
+    environment:
+      - JENKINS_MASTER_URL=http://jenkins-master:8080
+      - JENKINS_SLAVE_NAME=test-node
+      - JENKINS_SLAVE_LABELS=test-node maven java testing
+      - JENKINS_SLAVE_MODE=NORMAL
+      - JENKINS_SLAVE_EXECUTORS=2
+      - JAVA_OPTS=-Xmx1024m
+    volumes:
+      - jenkins_slave_test_workspace:/home/jenkins/workspace
+      - maven_repo_test:/home/jenkins/.m2
+    networks:
+      - jenkins-network
+    depends_on:
+      jenkins-master:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "slave.jar"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  jenkins-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  jenkins_home:
+    driver: local
+  jenkins_slave_compile_workspace:
+    driver: local
+  jenkins_slave_test_workspace:
+    driver: local
+  maven_repo_compile:
+    driver: local
+  maven_repo_test:
+    driver: local
