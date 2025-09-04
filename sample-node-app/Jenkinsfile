@@ -11,7 +11,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 // Checkout the source code from SCM (e.g., Git)
-                git branch: 'srishti-parulekar-219', url: 'https://github.com/TanV-04/DevOps_Lab_5.git' // Replace with your actual path or remote Git URL
+                git branch: 'zaid-nasim-262', url: 'https://github.com/TanV-04/DevOps_Lab_5.git' // Replace with your actual path or remote Git URL
             }
         }
 
