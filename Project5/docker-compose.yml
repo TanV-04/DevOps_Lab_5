@@ -1,7 +1,0 @@
-version: '3.8'
-services:
-  tanvi-app:
-    image: tanv04/tanvi-app:latest
-    expose:
-      - "8080"
-    restart: always
