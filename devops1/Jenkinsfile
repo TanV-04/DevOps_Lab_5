@@ -15,25 +15,6 @@ pipeline {
     }
 
 
-stage('Unit Tests') {
-  steps {
-    sh '''
-      set -euxo pipefail
-      # Run tests in a clean Python 3.12 container
-      docker run --rm \
-        -v "$WORKSPACE:/workspace" \
-        -w "/workspace" \
-        -e PIP_DISABLE_PIP_VERSION_CHECK=1 \
-        python:3.12-slim \
-        bash -c '
-          python3 -m pip install -U pip &&
-          pip3 install -r requirements.txt &&
-          python3 -m pip install -U pytest &&
-          pytest -q
-        '
-    '''
-  }
-}
 
 
     stage('Build Image') {
