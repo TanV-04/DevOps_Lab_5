@@ -19,7 +19,7 @@ pipeline {
         stage('🏗️ Build Application') {
             steps {
                 echo 'Building Spring Boot application...'
-                bat 'mvnw.cmd clean package -DskipTests'
+                bat './mvnw clean package -DskipTests'
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
             }
         }
