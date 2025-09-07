@@ -2,26 +2,35 @@
       agent any
 
       stages {
+          stage('Checkout') {
+              steps { checkout scm }
+          }
+
           stage('Diagnostics') {
               steps {
                   bat '''
                     echo WORKSPACE: %WORKSPACE%
                     dir "%WORKSPACE%"
-                    type "%WORKSPACE%\pom.xml" 1> NUL 2> NUL || echo pom.xml NOT FOUND
+                    dir "%WORKSPACE%\Project4\demo"
+                    if exist "%WORKSPACE%\pom.xml" (echo Found pom.xml at workspace root) else (echo No pom.xml at workspace root)
+                    if exist "%WORKSPACE%\Project4\demo\pom.xml" (echo Found pom.xml under Project4\demo) else (echo No pom.xml under Project4\demo)
                   '''
               }
-          }
-
-          stage('Checkout') {
-              steps { checkout scm }
           }
 
           stage('Compile') {
               steps {
                   bat '''
+                    set "MVN_DIR=/ws"
+                    if not exist "%WORKSPACE%\pom.xml" (
+                      if exist "%WORKSPACE%\Project4\demo\pom.xml" (
+                        set "MVN_DIR=/ws/Project4/demo"
+                      )
+                    )
+                    echo Using Maven working dir: %MVN_DIR%
                     docker run --rm ^
                       -v "%WORKSPACE%":/ws ^
-                      -w /ws ^
+                      -w %MVN_DIR% ^
                       maven:3.9-eclipse-temurin-21 mvn -B -V compile
                   '''
               }
@@ -30,9 +39,16 @@
           stage('Test') {
               steps {
                   bat '''
+                    set "MVN_DIR=/ws"
+                    if not exist "%WORKSPACE%\pom.xml" (
+                      if exist "%WORKSPACE%\Project4\demo\pom.xml" (
+                        set "MVN_DIR=/ws/Project4/demo"
+                      )
+                    )
+                    echo Using Maven working dir: %MVN_DIR%
                     docker run --rm ^
                       -v "%WORKSPACE%":/ws ^
-                      -w /ws ^
+                      -w %MVN_DIR% ^
                       maven:3.9-eclipse-temurin-21 mvn -B -V test
                   '''
               }
