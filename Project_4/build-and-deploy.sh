@@ -116,7 +116,7 @@ wait_for_services() {
     attempt=1
     
     while [ $attempt -le $max_attempts ]; do
-        if curl -f -s http://localhost:8080/health > /dev/null 2>&1; then
+        if curl -f -s http://localhost:8090/health > /dev/null 2>&1; then
             log_success "Application is healthy and ready!"
             break
         else
@@ -137,17 +137,17 @@ show_application_info() {
     log_success "🎉 Deployment completed successfully!"
     echo ""
     echo "📊 Service URLs:"
-    echo "  Main Application:     http://localhost:8080"
-    echo "  Load Balancer:        http://localhost"
-    echo "  Application Replica 1: http://localhost:8081"
-    echo "  Application Replica 2: http://localhost:8082"
+    echo "  Main Application:     http://localhost:8090"
+    echo "  Load Balancer:        http://localhost:8080"
+    echo "  Application Replica 1: http://localhost:8091"
+    echo "  Application Replica 2: http://localhost:8092"
     echo "  Grafana Dashboard:    http://localhost:3000 (admin/admin123)"
     echo "  Prometheus:           http://localhost:9090"
     echo ""
     echo "🔍 API Endpoints:"
-    echo "  Products API:         http://localhost:8080/api/products"
-    echo "  Health Check:         http://localhost:8080/health"
-    echo "  Application Info:     http://localhost:8080/"
+    echo "  Products API:         http://localhost:8090/api/products"
+    echo "  Health Check:         http://localhost:8090/health"
+    echo "  Application Info:     http://localhost:8090/"
     echo ""
     echo "🐳 Docker Commands:"
     echo "  View logs:            docker-compose logs -f"

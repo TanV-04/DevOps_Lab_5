@@ -1,5 +1,5 @@
 # Multi-stage build for Spring Boot application
-FROM maven:3.9-openjdk-17 as build
+FROM maven:3.9.0-eclipse-temurin-17 AS build
 
 # Set working directory
 WORKDIR /workspace/app
@@ -43,11 +43,11 @@ RUN chown -R appuser:appgroup /app
 USER appuser
 
 # Expose port
-EXPOSE 8080
+EXPOSE 8090
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8080/health || exit 1
+  CMD curl -f http://localhost:8090/health || exit 1
 
 # Run the application
-ENTRYPOINT ["java","-cp","app:app/lib/*","com.retail.RetailApplication"]
+ENTRYPOINT ["java","-cp","/app:/app/lib/*","com.retail.RetailApplication"]

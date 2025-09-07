@@ -1,13 +1,12 @@
 package com.example;
 
-/**
- * Hello world!
- *
- */
-public class App 
-{
-    public static void main( String[] args )
-    {
-        System.out.println( "App works!" );
+public class App {
+    public static void main(String[] args) {
+        System.out.println(greet("World"));
+    }
+
+    public static String greet(String name) {
+        return "Hello, " + name + "!";
     }
 }
+

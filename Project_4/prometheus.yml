@@ -14,19 +14,19 @@ scrape_configs:
   - job_name: 'retail-app'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['retail-app:8080']
+      - targets: ['retail-app:8090']
     scrape_interval: 30s
 
   - job_name: 'retail-app-replica1'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['retail-app-replica1:8080']
+      - targets: ['retail-app-replica1:8090']
     scrape_interval: 30s
 
   - job_name: 'retail-app-replica2'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['retail-app-replica2:8080']
+      - targets: ['retail-app-replica2:8090']
     scrape_interval: 30s
 
   - job_name: 'nginx'
