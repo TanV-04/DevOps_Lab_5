@@ -7,7 +7,7 @@ pipeline {
                 bat '''
                   echo WORKSPACE: %WORKSPACE%
                   dir "%WORKSPACE%"
-                  dir "%WORKSPACE%\devops1"
+                  dir "%WORKSPACE%/devops1"
                 '''
             }
         }
@@ -15,7 +15,7 @@ pipeline {
         stage('Build') {
             steps {
                 bat '''
-                  docker build -t flask-app -f "%WORKSPACE%\devops1\Dockerfile" "%WORKSPACE%\devops1"
+                  docker build -t flask-app -f "%WORKSPACE%/devops1/Dockerfile" "%WORKSPACE%/devops1"
                 '''
             }
         }
