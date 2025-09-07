@@ -1,0 +1,32 @@
+pipeline {
+    agent none
+
+    tools {
+        maven 'MAVEN_3.9.11'
+        jdk 'JDK_21' 
+    }
+
+    stages {
+        stage('Compile') {
+            agent { label 'compile' }
+            steps {
+                checkout scm
+                sh 'mvn compile'
+            }
+        }
+
+        stage('Test') {
+            agent { label 'test' }
+            steps {
+                checkout scm
+                sh 'mvn test'
+            }
+        }
+    }
+
+    post {
+        always {
+            junit '**/target/surefire-reports/*.xml'
+        }
+    }
+}
