@@ -23,7 +23,7 @@
                     docker run --rm ^
                       -v "%WORKSPACE%":/ws ^
                       -w /ws/Project4/demo ^
-                      maven:3.9-eclipse-temurin-21 mvn -B -V compile
+                      maven:3.9-eclipse-temurin-21 mvn -B -V clean compile
                   '''
               }
           }
