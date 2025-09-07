@@ -31,7 +31,7 @@ pipeline {
     stage('Build Docker image') {
       steps {
         bat '''
-          docker build -t %IMAGE%:%VERSION% -t %IMAGE%:latest -f "%WORKSPACE%\\devops1\\Dockerfile" "%WORKSPACE%\\devops1"
+          docker build -t %IMAGE%:%VERSION% -t %IMAGE%:latest .
         '''
       }
     }
