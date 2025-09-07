@@ -2,6 +2,16 @@
       agent any
 
       stages {
+          stage('Diagnostics') {
+              steps {
+                  bat '''
+                    echo WORKSPACE: %WORKSPACE%
+                    dir "%WORKSPACE%"
+                    type "%WORKSPACE%\pom.xml" 1> NUL 2> NUL || echo pom.xml NOT FOUND
+                  '''
+              }
+          }
+
           stage('Checkout') {
               steps { checkout scm }
           }
@@ -11,7 +21,7 @@
                   bat '''
                     docker run --rm ^
                       -v "%WORKSPACE%":/ws ^
-                      -w /ws/Project4/demo ^
+                      -w /ws ^
                       maven:3.9-eclipse-temurin-21 mvn -B -V compile
                   '''
               }
@@ -22,7 +32,7 @@
                   bat '''
                     docker run --rm ^
                       -v "%WORKSPACE%":/ws ^
-                      -w /ws/Project4/demo ^
+                      -w /ws ^
                       maven:3.9-eclipse-temurin-21 mvn -B -V test
                   '''
               }
