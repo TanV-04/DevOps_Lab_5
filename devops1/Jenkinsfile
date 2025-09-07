@@ -2,23 +2,39 @@ pipeline {
     agent any
 
     stages {
+        stage('Diagnostics') {
+            steps {
+                bat '''
+                  echo WORKSPACE: %WORKSPACE%
+                  dir "%WORKSPACE%"
+                  dir "%WORKSPACE%\devops1"
+                '''
+            }
+        }
+
         stage('Build') {
             steps {
-                sh 'docker build -t flask-app .'
+                bat '''
+                  docker build -t flask-app -f "%WORKSPACE%\devops1\Dockerfile" "%WORKSPACE%\devops1"
+                '''
             }
         }
         
         stage('Run') {
             steps {
-                sh 'docker rm -f demo || true'
-                sh 'docker run -d --name demo -p 5000:5000 flask-app'
+                bat '''
+                  docker rm -f demo || exit /B 0
+                  docker run -d --name demo -p 5000:5000 flask-app
+                '''
             }
         }
         
         stage('Test') {
             steps {
-                sh 'sleep 10'
-                sh 'curl http://localhost:5000/ || echo "Test failed"'
+                bat '''
+                  timeout /t 10 /nobreak > NUL
+                  curl http://localhost:5000/ || echo Test failed
+                '''
             }
         }
     }
