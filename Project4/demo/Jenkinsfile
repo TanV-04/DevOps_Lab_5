@@ -1,32 +1,37 @@
-pipeline {
-    agent none
+  pipeline {
+      agent any
 
-    tools {
-        maven 'MAVEN_3.9.11'
-        jdk 'JDK_21' 
-    }
+      stages {
+          stage('Checkout') {
+              steps { checkout scm }
+          }
 
-    stages {
-        stage('Compile') {
-            agent { label 'compile' }
-            steps {
-                checkout scm
-                sh 'mvn compile'
-            }
-        }
+          stage('Compile') {
+              steps {
+                  bat '''
+                    docker run --rm ^
+                      -v "%WORKSPACE%":/ws ^
+                      -w /ws ^
+                      maven:3.9-eclipse-temurin-21 mvn -B -V compile
+                  '''
+              }
+          }
 
-        stage('Test') {
-            agent { label 'test' }
-            steps {
-                checkout scm
-                sh 'mvn test'
-            }
-        }
-    }
+          stage('Test') {
+              steps {
+                  bat '''
+                    docker run --rm ^
+                      -v "%WORKSPACE%":/ws ^
+                      -w /ws ^
+                      maven:3.9-eclipse-temurin-21 mvn -B -V test
+                  '''
+              }
+          }
+      }
 
-    post {
-        always {
-            junit '**/target/surefire-reports/*.xml'
-        }
-    }
-}
+      post {
+          always {
+              junit '**/target/surefire-reports/*.xml'
+          }
+      }
+  }
