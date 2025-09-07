@@ -11,9 +11,9 @@
                   bat '''
                     echo WORKSPACE: %WORKSPACE%
                     dir "%WORKSPACE%"
-                    dir "%WORKSPACE%\Project4\demo"
-                    if exist "%WORKSPACE%\pom.xml" (echo Found pom.xml at workspace root) else (echo No pom.xml at workspace root)
-                    if exist "%WORKSPACE%\Project4\demo\pom.xml" (echo Found pom.xml under Project4\demo) else (echo No pom.xml under Project4\demo)
+                    dir "%WORKSPACE%/Project4/demo"
+                    if exist "%WORKSPACE%/pom.xml" (echo Found pom.xml at workspace root) else (echo No pom.xml at workspace root)
+                    if exist "%WORKSPACE%/Project4/demo/pom.xml" (echo Found pom.xml under Project4/demo) else (echo No pom.xml under Project4/demo)
                   '''
               }
           }
