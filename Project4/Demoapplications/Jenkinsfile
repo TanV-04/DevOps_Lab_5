@@ -1,0 +1,542 @@
+pipeline {
+    agent none
+    
+    environment {
+        MAVEN_OPTS = '-Xmx2048m -Xms1024m'
+        JAVA_HOME = '/usr/lib/jvm/java-11-openjdk-amd64'
+        MAVEN_HOME = '/usr/share/maven'
+        PATH = "${JAVA_HOME}/bin:${MAVEN_HOME}/bin:${PATH}"
+        APP_NAME = 'jenkins-spring-calculator'
+        APP_VERSION = '1.0.0'
+    }
+    
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timeout(time: 45, unit: 'MINUTES')
+        skipStagesAfterUnstable()
+        timestamps()
+    }
+    
+    parameters {
+        choice(
+            name: 'BUILD_TYPE',
+            choices: ['FULL', 'COMPILE_ONLY', 'TEST_ONLY'],
+            description: 'Type of build to execute'
+        )
+        booleanParam(
+            name: 'SKIP_TESTS',
+            defaultValue: false,
+            description: 'Skip test execution'
+        )
+        booleanParam(
+            name: 'DEPLOY_TO_STAGING',
+            defaultValue: false,
+            description: 'Deploy to staging environment'
+        )
+        string(
+            name: 'SPRING_PROFILES',
+            defaultValue: 'test',
+            description: 'Spring profiles to activate during testing'
+        )
+    }
+    
+    stages {
+        stage('Initialize') {
+            agent any
+            steps {
+                script {
+                    echo "🚀 Starting Spring Boot Distributed Pipeline"
+                    echo "Build Number: ${BUILD_NUMBER}"
+                    echo "Build URL: ${BUILD_URL}"
+                    echo "Build Type: ${params.BUILD_TYPE}"
+                    echo "Skip Tests: ${params.SKIP_TESTS}"
+                    echo "Spring Profiles: ${params.SPRING_PROFILES}"
+                    
+                    // Set build display name
+                    currentBuild.displayName = "#${BUILD_NUMBER} - ${params.BUILD_TYPE}"
+                    currentBuild.description = "Spring Boot Calculator Pipeline"
+                }
+                
+                // Checkout source code
+                checkout scm
+                
+                // Validate project structure
+                script {
+                    if (!fileExists('pom.xml')) {
+                        error('pom.xml not found! This is not a Maven project.')
+                    }
+                    if (!fileExists('src/main/java')) {
+                        error('src/main/java directory not found!')
+                    }
+                    echo "✅ Project structure validation passed"
+                }
+                
+                // Stash source code for slave nodes
+                stash includes: '**', excludes: 'target/**', name: 'source-code'
+                
+                echo "✅ Source code stashed successfully"
+            }
+        }
+        
+        stage('Parallel Build & Analysis') {
+            when {
+                anyOf {
+                    expression { params.BUILD_TYPE == 'FULL' }
+                    expression { params.BUILD_TYPE == 'COMPILE_ONLY' }
+                }
+            }
+            parallel {
+                stage('Compile & Package') {
+                    agent {
+                        label 'compile'
+                    }
+                    steps {
+                        script {
+                            echo "🔨 COMPILATION STAGE - Spring Boot"
+                            echo "Node: ${NODE_NAME}"
+                            echo "Workspace: ${WORKSPACE}"
+                            echo "Java Version: ${JAVA_HOME}"
+                        }
+                        
+                        // Unstash source code
+                        unstash 'source-code'
+                        
+                        // Verify environment
+                        sh '''
+                            echo "=== Environment Verification ==="
+                            java -version
+                            mvn -version
+                            echo "JAVA_HOME: $JAVA_HOME"
+                            echo "MAVEN_HOME: $MAVEN_HOME"
+                            echo "PATH: $PATH"
+                        '''
+                        
+                        // Clean previous builds
+                        sh '''
+                            echo "🧹 Cleaning previous builds..."
+                            mvn clean -q
+                        '''
+                        
+                        // Download dependencies
+                        sh '''
+                            echo "📦 Downloading dependencies..."
+                            mvn dependency:resolve dependency:resolve-sources -q
+                        '''
+                        
+                        // Compile the Spring Boot application
+                        sh '''
+                            echo "⚙️  Compiling Spring Boot application..."
+                            mvn compile -DskipTests=true -q
+                        '''
+                        
+                        // Package the application (creates executable JAR)
+                        sh '''
+                            echo "📦 Packaging Spring Boot application..."
+                            mvn package -DskipTests=true -q
+                        '''
+                        
+                        // Verify JAR creation
+                        script {
+                            if (fileExists("target/${APP_NAME}-${APP_VERSION}.jar")) {
+                                echo "✅ Spring Boot JAR created successfully: ${APP_NAME}-${APP_VERSION}.jar"
+                                
+                                // Get JAR file size
+                                def jarSize = sh(script: "ls -lh target/${APP_NAME}-${APP_VERSION}.jar | awk '{print \$5}'", returnStdout: true).trim()
+                                echo "📊 JAR file size: ${jarSize}"
+                            } else {
+                                error("❌ Failed to create Spring Boot JAR file")
+                            }
+                        }
+                        
+                        // Archive build artifacts
+                        archiveArtifacts artifacts: 'target/*.jar', fingerprint: true, allowEmptyArchive: false
+                        
+                        // Stash compiled artifacts for testing stage
+                        stash includes: 'target/**', name: 'compiled-artifacts'
+                        
+                        echo "✅ Compilation completed successfully on ${NODE_NAME}"
+                    }
+                    post {
+                        success {
+                            echo "🎉 Compilation stage completed successfully!"
+                        }
+                        failure {
+                            echo "❌ Compilation stage failed!"
+                        }
+                        always {
+                            // Publish compilation results
+                            publishHTML([
+                                allowMissing: false,
+                                alwaysLinkToLastBuild: true,
+                                keepAll: true,
+                                reportDir: 'target',
+                                reportFiles: '*.jar',
+                                reportName: 'Spring Boot Artifacts',
+                                reportTitles: 'Compilation Artifacts'
+                            ])
+                        }
+                    }
+                }
+                
+                stage('Code Quality Analysis') {
+                    agent {
+                        label 'compile'
+                    }
+                    steps {
+                        unstash 'source-code'
+                        
+                        script {
+                            echo "🔍 CODE QUALITY ANALYSIS"
+                            echo "Running on node: ${NODE_NAME}"
+                        }
+                        
+                        // Static code analysis
+                        sh '''
+                            echo "📊 Performing static code analysis..."
+                            
+                            echo "=== Project Statistics ==="
+                            echo "Java files count:"
+                            find src/main/java -name "*.java" | wc -l
+                            
+                            echo "Test files count:"
+                            find src/test/java -name "*.java" | wc -l
+                            
+                            echo "Total lines of code:"
+                            find src/main/java -name "*.java" -exec wc -l {} + | tail -1
+                            
+                            echo "=== Dependency Analysis ==="
+                            mvn dependency:tree -q
+                            
+                            echo "=== Maven Effective POM ==="
+                            mvn help:effective-pom -q | head -50
+                        '''
+                        
+                        // Check for Spring Boot specific configurations
+                        sh '''
+                            echo "🌱 Spring Boot Configuration Analysis"
+                            if [ -f "src/main/resources/application.properties" ]; then
+                                echo "✅ application.properties found"
+                                echo "Properties count: $(wc -l < src/main/resources/application.properties)"
+                            fi
+                            
+                            if [ -f "src/main/resources/application.yml" ]; then
+                                echo "✅ application.yml found"
+                            fi
+                            
+                            echo "Spring Boot starter dependencies:"
+                            grep -n "spring-boot-starter" pom.xml || echo "No Spring Boot starters found"
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Testing Suite') {
+            when {
+                anyOf {
+                    expression { params.BUILD_TYPE == 'FULL' }
+                    expression { params.BUILD_TYPE == 'TEST_ONLY' }
+                }
+                not { 
+                    expression { params.SKIP_TESTS == true }
+                }
+            }
+            agent {
+                label 'test'
+            }
+            steps {
+                script {
+                    echo "🧪 TESTING STAGE - Spring Boot"
+                    echo "Node: ${NODE_NAME}"
+                    echo "Workspace: ${WORKSPACE}"
+                    echo "Spring Profiles: ${params.SPRING_PROFILES}"
+                }
+                
+                // Unstash source code and compiled artifacts
+                unstash 'source-code'
+                unstash 'compiled-artifacts'
+                
+                // Verify test environment
+                sh '''
+                    echo "=== Test Environment Verification ==="
+                    java -version
+                    mvn -version
+                    echo "Available memory:"
+                    free -h
+                    echo "Disk space:"
+                    df -h
+                '''
+                
+                // Run unit tests
+                sh '''
+                    echo "🔬 Running Unit Tests..."
+                    mvn test -Dspring.profiles.active=${SPRING_PROFILES} -q
+                '''
+                
+                // Run integration tests
+                sh '''
+                    echo "🔗 Running Integration Tests..."
+                    mvn verify -DskipUnitTests=true -Dspring.profiles.active=${SPRING_PROFILES} -q
+                '''
+                
+                // Generate test reports
+                sh '''
+                    echo "📊 Generating Test Reports..."
+                    if [ -d "target/site/jacoco" ]; then
+                        echo "✅ Code coverage reports generated"
+                        echo "Coverage report location: target/site/jacoco/index.html"
+                    else
+                        echo "⚠️  No code coverage reports found"
+                    fi
+                '''
+                
+                echo "✅ Testing completed successfully on ${NODE_NAME}"
+            }
+            post {
+                always {
+                    // Publish test results
+                    junit testResults: 'target/surefire-reports/*.xml', allowEmptyResults: true
+                    junit testResults: 'target/failsafe-reports/*.xml', allowEmptyResults: true
+                    
+                    // Publish test coverage report
+                    publishHTML([
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'target/site/jacoco',
+                        reportFiles: 'index.html',
+                        reportName: 'Code Coverage Report',
+                        reportTitles: 'JaCoCo Coverage Report'
+                    ])
+                    
+                    // Archive test reports
+                    archiveArtifacts artifacts: 'target/surefire-reports/**', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'target/failsafe-reports/**', allowEmptyArchive: true
+                }
+                success {
+                    echo "🎉 All tests passed successfully!"
+                }
+                failure {
+                    echo "❌ Tests failed! Check test reports for details."
+                }
+                unstable {
+                    echo "⚠️  Some tests were unstable. Please review."
+                }
+            }
+        }
+        
+        stage('Spring Boot Health Check') {
+            when {
+                expression { params.BUILD_TYPE == 'FULL' }
+                not { 
+                    expression { params.SKIP_TESTS == true }
+                }
+            }
+            agent {
+                label 'test'
+            }
+            steps {
+                script {
+                    echo "🩺 SPRING BOOT HEALTH CHECK"
+                    echo "Starting application for health verification..."
+                }
+                
+                unstash 'source-code'
+                unstash 'compiled-artifacts'
+                
+                // Start Spring Boot application in background
+                sh '''
+                    echo "🚀 Starting Spring Boot application..."
+                    nohup java -jar target/${APP_NAME}-${APP_VERSION}.jar \
+                        --spring.profiles.active=${SPRING_PROFILES} \
+                        --server.port=8080 \
+                        > spring-boot-app.log 2>&1 &
+                    
+                    echo $! > app.pid
+                    echo "Application PID: $(cat app.pid)"
+                '''
+                
+                // Wait for application to start
+                sh '''
+                    echo "⏳ Waiting for application to start..."
+                    timeout=60
+                    count=0
+                    
+                    while [ $count -lt $timeout ]; do
+                        if curl -s http://localhost:8080/actuator/health > /dev/null 2>&1; then
+                            echo "✅ Application is running!"
+                            break
+                        fi
+                        echo "Waiting for application... ($count/$timeout)"
+                        sleep 2
+                        count=$((count + 2))
+                    done
+                    
+                    if [ $count -ge $timeout ]; then
+                        echo "❌ Application failed to start within $timeout seconds"
+                        echo "=== Application Logs ==="
+                        cat spring-boot-app.log
+                        exit 1
+                    fi
+                '''
+                
+                // Test health endpoints
+                sh '''
+                    echo "🔍 Testing health endpoints..."
+                    
+                    echo "=== Health Check ==="
+                    curl -s http://localhost:8080/actuator/health | jq '.'
+                    
+                    echo "=== Application Info ==="
+                    curl -s http://localhost:8080/actuator/info | jq '.'
+                    
+                    echo "=== Calculator Service Health ==="
+                    curl -s http://localhost:8080/api/calculator/health | jq '.'
+                '''
+                
+                // Test calculator endpoints
+                sh '''
+                    echo "🧮 Testing calculator endpoints..."
+                    
+                    echo "=== Testing Addition ==="
+                    curl -s -X POST "http://localhost:8080/api/calculator/add?a=10&b=5" | jq '.'
+                    
+                    echo "=== Testing Subtraction ==="
+                    curl -s -X POST "http://localhost:8080/api/calculator/subtract?a=10&b=5" | jq '.'
+                    
+                    echo "=== Testing Multiplication ==="
+                    curl -s -X POST "http://localhost:8080/api/calculator/multiply?a=10&b=5" | jq '.'
+                    
+                    echo "=== Testing Division ==="
+                    curl -s -X POST "http://localhost:8080/api/calculator/divide?a=10&b=5" | jq '.'
+                    
+                    echo "=== Testing Power ==="
+                    curl -s -X POST "http://localhost:8080/api/calculator/power?base=2&exponent=3" | jq '.'
+                '''
+                
+                echo "✅ Health check completed successfully!"
+            }
+            post {
+                always {
+                    // Stop the application
+                    sh '''
+                        if [ -f app.pid ]; then
+                            echo "🛑 Stopping Spring Boot application..."
+                            kill $(cat app.pid) || true
+                            rm -f app.pid
+                        fi
+                    '''
+                    
+                    // Archive application logs
+                    archiveArtifacts artifacts: 'spring-boot-app.log', allowEmptyArchive: true
+                }
+            }
+        }
+        
+        stage('Deploy to Staging') {
+            when {
+                allOf {
+                    expression { params.DEPLOY_TO_STAGING == true }
+                    expression { params.BUILD_TYPE == 'FULL' }
+                    branch 'main'
+                }
+            }
+            agent {
+                label 'compile'
+            }
+            steps {
+                script {
+                    echo "🚀 DEPLOYMENT STAGE"
+                    echo "Deploying to staging environment..."
+                }
+                
+                unstash 'source-code'
+                unstash 'compiled-artifacts'
+                
+                // Prepare deployment
+                sh '''
+                    echo "📦 Preparing deployment artifacts..."
+                    
+                    # Create deployment directory
+                    mkdir -p deployment
+                    
+                    # Copy JAR file
+                    cp target/${APP_NAME}-${APP_VERSION}.jar deployment/
+                    
+                    # Create deployment script
+                    cat > deployment/start.sh << 'EOF'
+#!/bin/bash
+echo "Starting Jenkins Spring Calculator..."
+java -jar ${APP_NAME}-${APP_VERSION}.jar \
+    --spring.profiles.active=staging \
+    --server.port=8080
+EOF
+                    
+                    chmod +x deployment/start.sh
+                    
+                    echo "✅ Deployment artifacts prepared"
+                    ls -la deployment/
+                '''
+                
+                // Archive deployment artifacts
+                archiveArtifacts artifacts: 'deployment/**', fingerprint: true
+                
+                echo "✅ Deployment completed successfully!"
+            }
+        }
+    }
+    
+    post {
+        always {
+            script {
+                echo "🏁 PIPELINE COMPLETED"
+                echo "Total Build Time: ${currentBuild.durationString}"
+                echo "Build Result: ${currentBuild.currentResult}"
+                echo "Build URL: ${BUILD_URL}"
+                
+                // Cleanup workspaces on all nodes
+                node('compile') {
+                    cleanWs()
+                }
+                node('test') {
+                    cleanWs()
+                }
+            }
+        }
+        success {
+            script {
+                echo "✅ PIPELINE SUCCESS!"
+                echo "🎉 Spring Boot application built and tested successfully!"
+                echo "📊 Check the reports for detailed information"
+                
+                // Send success notification (if configured)
+                // emailext (
+                //     subject: "✅ Jenkins Pipeline Success: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                //     body: "The Spring Boot pipeline has completed successfully!\n\nBuild URL: ${env.BUILD_URL}",
+                //     recipientProviders: [[$class: 'DevelopersRecipientProvider']]
+                // )
+            }
+        }
+        failure {
+            script {
+                echo "❌ PIPELINE FAILED!"
+                echo "🔍 Check the console output and reports for error details"
+                echo "📧 Notifications sent to development team"
+                
+                // Send failure notification (if configured)
+                // emailext (
+                //     subject: "❌ Jenkins Pipeline Failed: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                //     body: "The Spring Boot pipeline has failed!\n\nPlease check the console output at: ${env.BUILD_URL}\n\nFailure stage: ${env.STAGE_NAME}",
+                //     recipientProviders: [[$class: 'DevelopersRecipientProvider']]
+                // )
+            }
+        }
+        unstable {
+            script {
+                echo "⚠️  PIPELINE UNSTABLE!"
+                echo "Some tests may have failed or been skipped"
+                echo "Please review the test reports"
+            }
+        }
+    }
+}
