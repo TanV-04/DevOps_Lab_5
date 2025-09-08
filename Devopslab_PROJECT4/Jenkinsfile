@@ -1,34 +1,28 @@
 pipeline {
-    agent none
+  agent none
 
-    stages {
-        stage('Checkout') {
-            agent { label 'compile' }
-            steps {
-                git branch: 'soumili', url: 'https://github.com/TanV-04/DevOps_Lab_5.git'
-                stash includes: '**/*', name: 'source-code'
-            }
-        }
-        
-        stage('Compile') {
-            agent { label 'compile' }
-            steps {
-                unstash 'source-code'
-                dir('Devopslab_PROJECT4') {
-                    sh 'mvn clean compile'  // Changed from 'bat' to 'sh'
-                }
-                stash includes: 'Devopslab_PROJECT4/**/*', name: 'compiled-code'
-            }
-        }
-        
-        stage('Test') {
-            agent { label 'test' }
-            steps {
-                unstash 'compiled-code'
-                dir('Devopslab_PROJECT4') {
-                    sh 'mvn test'  // Changed from 'bat' to 'sh'
-                }
-            }
-        }
+  stages {
+    stage('Checkout') {
+      agent { label 'compile' }
+      steps {
+        git branch: 'soumili', url: 'https://github.com/TanV-04/DevOps_Lab_5.git'
+      }
     }
+    stage('Compile') {
+      agent { label 'compile' }
+      steps {
+        dir('Devopslab_PROJECT4') {
+          bat 'mvn clean compile'
+        }
+      }
+    }
+    stage('Test') {
+      agent { label 'test' }
+      steps {
+        dir('Devopslab_PROJECT4') {
+          bat 'mvn test'
+        }
+      }
+    }
+  }
 }
