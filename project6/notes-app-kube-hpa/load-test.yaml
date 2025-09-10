@@ -1,0 +1,13 @@
+config:
+  target: "http://127.0.0.1:63351"   # your Minikube IP + NodePort
+  phases:
+    - duration: 400      # 1 minute
+      arrivalRate: 20   # 20 requests per second
+scenarios:
+  - flow:
+      - get:
+          url: "/"
+      - post:
+          url: "/"
+          json:
+            noteContent: "Load test note"
