@@ -17,26 +17,13 @@
               }
           }
 
-          stage('Pre-clean') {
-              steps {
-                  bat '''
-                    if exist "%WORKSPACE%\Project4\demo\target" (
-                      echo Removing existing target directory...
-                      rmdir /s /q "%WORKSPACE%\Project4\demo\target"
-                    ) else (
-                      echo No target directory to remove.
-                    )
-                  '''
-              }
-          }
-
           stage('Compile') {
               steps {
                   bat '''
                     docker run --rm ^
                       -v "%WORKSPACE%":/ws ^
                       -w /ws/Project4/demo ^
-                      maven:3.9-eclipse-temurin-21 mvn -B -V clean compile
+                      maven:3.9-eclipse-temurin-21 mvn -B -V compile
                   '''
               }
           }
