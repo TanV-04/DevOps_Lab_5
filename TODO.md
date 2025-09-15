@@ -65,12 +65,4 @@
 - **No Errors**: Dependencies installed and server started without issues.
 - **Files**: package.json, server.js, Kubernetes YAML files (deployment.yaml, service.yaml, etc.).
 
----
 
-## Summary
-- **Total Assignments**: 6
-- **Successfully Executed**: 4 (Assignment2, Assignment4, Assignment5, Assignment6)
-- **Skipped**: 1 (Assignment1 due to network issue)
-- **No Execution Needed**: 1 (Assignment3)
-- **Errors Found**: 0 (all executed assignments ran without code errors)
-- **Active Applications**: Assignment2 (Angular), Assignment5 (Spring Boot), Assignment6 (Node.js)
