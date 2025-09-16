@@ -1,4 +1,4 @@
-package com.devops.jenkins;
+package main.java.com.devops.jenkins;
 
 public class Calculator {
 
