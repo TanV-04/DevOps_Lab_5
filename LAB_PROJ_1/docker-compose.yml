@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    restart: unless-stopped
+    privileged: true
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    networks:
+      - jenkins-network
+
+  docker-in-docker:
+    image: docker:dind
+    container_name: docker-dind
+    restart: unless-stopped
+    privileged: true
+    networks:
+      - jenkins-network
+    volumes:
+      - docker-certs-ca:/certs/ca
+      - docker-certs-client:/certs/client
+      - jenkins_data:/var/jenkins_home
+    environment:
+      - DOCKER_TLS_CERTDIR=/certs
+
+  app:
+    build: .
+    container_name: litestar-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    networks:
+      - jenkins-network
+
+volumes:
+  jenkins_data:
+  docker-certs-ca:
+  docker-certs-client:
+
+networks:
+  jenkins-network:
+    driver: bridge
