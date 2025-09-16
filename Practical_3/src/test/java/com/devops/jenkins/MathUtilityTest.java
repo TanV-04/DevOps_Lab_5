@@ -1,4 +1,4 @@
-package com.devops.jenkins;
+package test.java.com.devops.jenkins;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
