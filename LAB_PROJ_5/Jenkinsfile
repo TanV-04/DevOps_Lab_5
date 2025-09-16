@@ -1,0 +1,227 @@
+pipeline {
+    agent any
+    
+    environment {
+        KUBECONFIG = credentials('kubeconfig-credential')
+        KUBECTL_VERSION = '1.31.4'
+        NAMESPACE = 'default'
+    }
+    
+    parameters {
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['dev', 'staging', 'prod'],
+            description: 'Select deployment environment'
+        )
+        booleanParam(
+            name: 'DEPLOY_CLUSTER_AUTOSCALER',
+            defaultValue: false,
+            description: 'Deploy Cluster Autoscaler (only for cloud environments)'
+        )
+        booleanParam(
+            name: 'RUN_LOAD_TEST',
+            defaultValue: false,
+            description: 'Run load test after deployment'
+        )
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out source code...'
+                checkout scm
+            }
+        }
+        
+        stage('Validate Kubernetes Manifests') {
+            steps {
+                echo 'Validating Kubernetes manifests...'
+                script {
+                    sh '''
+                        # Install kubectl if not present
+                        if ! command -v kubectl &> /dev/null; then
+                            curl -LO "https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+                            chmod +x kubectl
+                            sudo mv kubectl /usr/local/bin/
+                        fi
+                        
+                        # Validate manifests
+                        kubectl --dry-run=client apply -f deployment.yaml
+                        kubectl --dry-run=client apply -f hpa.yaml
+                        
+                        if [ "${params.DEPLOY_CLUSTER_AUTOSCALER}" == "true" ]; then
+                            kubectl --dry-run=client apply -f cluster-autoscaler.yaml
+                        fi
+                    '''
+                }
+            }
+        }
+        
+        stage('Deploy to Kubernetes') {
+            steps {
+                echo "Deploying to ${params.ENVIRONMENT} environment..."
+                script {
+                    sh '''
+                        # Set namespace based on environment
+                        if [ "${ENVIRONMENT}" != "prod" ]; then
+                            NAMESPACE="${ENVIRONMENT}"
+                            kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+                        fi
+                        
+                        # Deploy application
+                        kubectl apply -f deployment.yaml -n ${NAMESPACE}
+                        
+                        # Wait for deployment to be ready
+                        kubectl rollout status deployment/webapp-deployment -n ${NAMESPACE} --timeout=300s
+                        
+                        # Deploy HPA
+                        kubectl apply -f hpa.yaml -n ${NAMESPACE}
+                        
+                        # Deploy Cluster Autoscaler if requested
+                        if [ "${DEPLOY_CLUSTER_AUTOSCALER}" == "true" ]; then
+                            kubectl apply -f cluster-autoscaler.yaml
+                        fi
+                    '''
+                }
+            }
+        }
+        
+        stage('Verify Deployment') {
+            steps {
+                echo 'Verifying deployment...'
+                script {
+                    sh '''
+                        # Check pod status
+                        kubectl get pods -l app=webapp -n ${NAMESPACE}
+                        
+                        # Check HPA status
+                        kubectl get hpa webapp-hpa -n ${NAMESPACE}
+                        
+                        # Check service status
+                        kubectl get service webapp-service -n ${NAMESPACE}
+                        
+                        # Wait for HPA to get metrics (may take 1-2 minutes)
+                        echo "Waiting for HPA metrics..."
+                        for i in {1..12}; do
+                            if kubectl get hpa webapp-hpa -n ${NAMESPACE} -o jsonpath='{.status.currentMetrics}' | grep -q "value"; then
+                                echo "HPA metrics available"
+                                break
+                            fi
+                            echo "Waiting for metrics... ($i/12)"
+                            sleep 10
+                        done
+                    '''
+                }
+            }
+        }
+        
+        stage('Load Test') {
+            when {
+                expression { params.RUN_LOAD_TEST == true }
+            }
+            steps {
+                echo 'Running load test...'
+                script {
+                    sh '''
+                        # Deploy load test
+                        kubectl apply -f intensive-load.yaml -n ${NAMESPACE}
+                        
+                        echo "Load test started. Monitoring for 5 minutes..."
+                        
+                        # Monitor scaling for 5 minutes
+                        timeout 300s kubectl get hpa webapp-hpa -n ${NAMESPACE} -w &
+                        HPA_PID=$!
+                        
+                        sleep 300
+                        
+                        # Stop monitoring
+                        kill $HPA_PID 2>/dev/null || true
+                        
+                        # Show final status
+                        echo "Final scaling status:"
+                        kubectl get hpa webapp-hpa -n ${NAMESPACE}
+                        kubectl get pods -l app=webapp -n ${NAMESPACE}
+                        
+                        # Cleanup load test
+                        kubectl delete -f intensive-load.yaml -n ${NAMESPACE} || true
+                    '''
+                }
+            }
+        }
+        
+        stage('Health Check') {
+            steps {
+                echo 'Performing health check...'
+                script {
+                    sh '''
+                        # Get service endpoint
+                        SERVICE_IP=$(kubectl get service webapp-service -n ${NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+                        
+                        if [ -z "$SERVICE_IP" ]; then
+                            # For minikube or local clusters, use port-forward for testing
+                            kubectl port-forward service/webapp-service 8080:80 -n ${NAMESPACE} &
+                            PORT_FORWARD_PID=$!
+                            sleep 5
+                            
+                            # Test health
+                            if curl -f http://localhost:8080 > /dev/null 2>&1; then
+                                echo "Health check passed!"
+                            else
+                                echo "Health check failed!"
+                                exit 1
+                            fi
+                            
+                            kill $PORT_FORWARD_PID 2>/dev/null || true
+                        else
+                            # Test external IP
+                            if curl -f http://$SERVICE_IP > /dev/null 2>&1; then
+                                echo "Health check passed!"
+                            else
+                                echo "Health check failed!"
+                                exit 1
+                            fi
+                        fi
+                    '''
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo 'Cleaning up...'
+            script {
+                sh '''
+                    # Clean up any port-forwards
+                    pkill -f "kubectl port-forward" || true
+                    
+                    # Show final deployment status
+                    echo "=== Final Deployment Status ==="
+                    kubectl get all -l app=webapp -n ${NAMESPACE} || true
+                    kubectl get hpa -n ${NAMESPACE} || true
+                '''
+            }
+        }
+        success {
+            echo 'Deployment completed successfully!'
+            script {
+                // Send notification or update status
+                sh '''
+                    echo "Kubernetes autoscaling application deployed successfully to ${ENVIRONMENT}"
+                    echo "Namespace: ${NAMESPACE}"
+                    echo "HPA Status: $(kubectl get hpa webapp-hpa -n ${NAMESPACE} -o jsonpath='{.status.currentReplicas}')/$(kubectl get hpa webapp-hpa -n ${NAMESPACE} -o jsonpath='{.spec.maxReplicas}') replicas"
+                '''
+            }
+        }
+        failure {
+            echo 'Deployment failed!'
+            script {
+                sh '''
+                    echo "=== Troubleshooting Information ==="
+                    kubectl describe pods -l app=webapp -n ${NAMESPACE} || true
+                    kubectl get events --sort-by=.metadata.creationTimestamp -n ${NAMESPACE} || true
+                '''
+            }
+        }
+    }
+}
