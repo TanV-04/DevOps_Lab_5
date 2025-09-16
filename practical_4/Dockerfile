@@ -1,20 +1,19 @@
-# Use official Node.js runtime as base
 FROM node:18
 
 # Set working directory
 WORKDIR /usr/src/app
 
-# Copy package files first (better caching)
+# Copy dependency files
 COPY package*.json ./
 
 # Install dependencies
 RUN npm install
 
-# Copy rest of the app
+# Copy app files
 COPY . .
 
-# Expose port
-EXPOSE 8080
+# Expose app port
+EXPOSE 5000
 
 # Start app
 CMD ["npm", "start"]
