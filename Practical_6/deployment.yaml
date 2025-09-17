@@ -14,7 +14,8 @@ spec:
     spec:
       containers:
         - name: socialmedia
-          image: mak2580/socialmedia-app:1.0
+          image: socialmedia:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5000
           resources:
