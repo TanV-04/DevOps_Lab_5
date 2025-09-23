@@ -1,20 +1,23 @@
+# Use official Python base image
 FROM python:3.11-slim
 
+# Set working directory
 WORKDIR /app
 
-# Install build dependencies (optional but useful)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential gcc && \
-    rm -rf /var/lib/apt/lists/*
+# Copy requirements first to leverage Docker cache
+COPY LAB_PROJ_1/requirements.txt .
 
-# Copy requirements and install
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install dependencies
+RUN python -m venv venv && \
+    . venv/bin/activate && \
+    pip install --upgrade pip && \
+    pip install -r requirements.txt
 
-# Copy project files (app.py is at repo root)
-COPY . .
+# Copy app code
+COPY LAB_PROJ_1/ .
 
+# Expose port
 EXPOSE 8000
 
-# Run Litestar app with uvicorn
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the app
+CMD ["sh", "-c", ". venv/bin/activate && uvicorn app:app --host 0.0.0.0 --port 8000"]
