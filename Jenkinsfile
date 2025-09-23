@@ -2,17 +2,17 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "litestar-app:latest"
+        PROJECT_DIR = "LAB_PROJ_1"
+        VENV_DIR = "${PROJECT_DIR}/venv"
+        IMAGE_NAME = "lab1_project_image"
+        CONTAINER_NAME = "lab1_project_container"
     }
 
     stages {
         stage('Checkout SCM') {
             steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: 'Aryan_Mulik_518']],
-                    doGenerateSubmoduleConfigurations: false,
-                    extensions: [],
+                checkout([$class: 'GitSCM',
+                    branches: [[name: '*/Aryan_Mulik_518']],
                     userRemoteConfigs: [[url: 'https://github.com/TanV-04/DevOps_Lab_5.git']]
                 ])
             }
@@ -20,7 +20,7 @@ pipeline {
 
         stage('Setup Python Environment') {
             steps {
-                dir('LAB_PROJ_1') {
+                dir("${PROJECT_DIR}") {
                     sh '''
                         python3 -m venv venv
                         . venv/bin/activate
@@ -33,12 +33,13 @@ pipeline {
 
         stage('Lint and Code Quality') {
             steps {
-                dir('LAB_PROJ_1') {
+                dir("${PROJECT_DIR}") {
                     sh '''
                         . venv/bin/activate
                         pip install flake8 pylint
-                        flake8 .
-                        pylint *.py || true
+                        # Lint project files only, exclude virtual environment
+                        flake8 . --exclude venv
+                        pylint *.py
                     '''
                 }
             }
@@ -46,33 +47,39 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                dir('LAB_PROJ_1') {
-                    sh 'docker build -t $DOCKER_IMAGE .'
+                dir("${PROJECT_DIR}") {
+                    sh '''
+                        docker build -t ${IMAGE_NAME} .
+                    '''
                 }
             }
         }
 
         stage('Security Scan') {
             steps {
-                echo 'Skipping security scan for demo purposes'
+                sh '''
+                    # Run Trivy scan if installed; do not fail pipeline if not installed
+                    command -v trivy >/dev/null 2>&1 && trivy image ${IMAGE_NAME} || echo "Trivy not installed, skipping scan"
+                '''
             }
         }
 
         stage('Deploy to Staging') {
             steps {
-                dir('LAB_PROJ_1') {
-                    sh 'docker run -d -p 8000:8000 --name litestar-app $DOCKER_IMAGE'
-                }
+                sh '''
+                    docker stop ${CONTAINER_NAME} || true
+                    docker rm ${CONTAINER_NAME} || true
+                    docker run -d --name ${CONTAINER_NAME} -p 8090:8090 ${IMAGE_NAME}
+                '''
             }
         }
 
         stage('Integration Tests') {
             steps {
-                dir('LAB_PROJ_1') {
+                dir("${PROJECT_DIR}") {
                     sh '''
                         . venv/bin/activate
-                        echo "Running integration tests..."
-                        # You can add your test commands here, e.g. pytest
+                        python3 -m unittest discover -s tests
                     '''
                 }
             }
@@ -80,21 +87,24 @@ pipeline {
 
         stage('Deploy to Production') {
             steps {
-                echo 'Skipping production deploy for demo purposes'
+                sh '''
+                    # Add production deployment commands
+                    echo "Deploying ${IMAGE_NAME} to production..."
+                '''
             }
         }
     }
 
     post {
         always {
-            echo 'Cleaning workspace...'
+            echo "Cleaning workspace..."
             cleanWs()
         }
         success {
-            echo 'Pipeline completed successfully!'
+            echo "Pipeline completed successfully!"
         }
         failure {
-            echo 'Pipeline failed!'
+            echo "Pipeline failed!"
         }
     }
 }
