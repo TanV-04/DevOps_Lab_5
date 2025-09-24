@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>Calculator</title>
+</head>
+
+<body>
+  <h1>Calculator</h1>
+  <p>Enter numbers and click an operation.</p>
+  <input id="a" placeholder="a" />
+  <input id="b" placeholder="b" />
+  <button onclick="call('add')">Add</button>
+  <button onclick="call('sub')">Sub</button>
+  <button onclick="call('mul')">Mul</button>
+  <button onclick="call('div')">Div</button>
+
+  <pre id="out"></pre>
+
+  <script>
+    const apiBase = 'http://localhost:3001';
+
+    async function call(op) {
+      const a = parseFloat(document.getElementById('a').value);
+      const b = parseFloat(document.getElementById('b').value);
+
+      const urlMap = {
+        add: 'http://localhost:3001/add',
+        sub: 'http://localhost:3004/subtract',
+        mul: 'http://localhost:3003/multiply',
+        div: 'http://localhost:3002/divide'
+      };
+
+      const url = urlMap[op];
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ num1: a, num2: b })
+        });
+
+        const json = await res.json();
+        document.getElementById('out').textContent = JSON.stringify(json, null, 2);
+      } catch (e) {
+        document.getElementById('out').textContent = 'Error: ' + e;
+      }
+    }
+  </script>
+
+</body>
+
+</html>

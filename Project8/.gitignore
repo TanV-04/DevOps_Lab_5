@@ -1,0 +1,30 @@
+/node_modules/
+
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+.env
+
+Dockerfile
+docker-compose.yml
+
+*.log
+
+.DS_Store   # macOS
+Thumbs.db   # Windows
+
+.vscode/     # Visual Studio Code settings
+.idea/       # JetBrains IDEs settings
+
+/dist/
+build/
+
+coverage/    # Test coverage directory
+*.tgz        # Package distribution files
+
+/public/
+
+/frontend/build/
+
+/k8s/*
