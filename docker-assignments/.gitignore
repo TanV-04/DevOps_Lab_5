@@ -1,0 +1,35 @@
+# macOS system files
+.DS_Store
+
+# Python virtual environments
+venv/
+**/venv/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE files
+.idea/
+*.iml
+
+# Node.js / React
+node_modules/
+build/
+dist/
+
+# Logs
+*.log
+
+# Embedded Git repos (avoid committing accidentally)
+**/project-3/.git
+
+# OS temporary files
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# Others you may want to ignore
+*.env
