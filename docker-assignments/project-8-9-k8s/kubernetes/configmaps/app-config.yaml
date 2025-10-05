@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: microservices
+data:
+  DB_HOST: "mongodb-service"
+  DB_PORT: "27017"
+  DB_NAME: "microservices_db"
+  USER_SERVICE_URL: "http://user-service:5001"
+  PRODUCT_SERVICE_URL: "http://product-service:5002"
+  ORDER_SERVICE_URL: "http://order-service:5003"
+  NOTIFICATION_SERVICE_URL: "http://notification-service:5004"
+  SMTP_HOST: "smtp.gmail.com"
+  SMTP_PORT: "587"
+  SMTP_USER: "noreply@example.com"

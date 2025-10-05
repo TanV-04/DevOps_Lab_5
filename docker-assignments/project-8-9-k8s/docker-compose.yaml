@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  user-service:
+    build: ./services/user-service
+    ports:
+      - "5001:5001"
+    environment:
+      - DB_HOST=mongodb
+      - DB_PORT=27017
+      - DB_NAME=userdb
+      - SECRET_KEY=super-secret-key-123
+    networks:
+      - microservices-network
+
+  product-service:
+    build: ./services/product-service
+    ports:
+      - "5002:5002"
+    environment:
+      - DB_HOST=mongodb
+      - SECRET_KEY=super-secret-key-123
+    networks:
+      - microservices-network
+
+  order-service:
+    build: ./services/order-service
+    ports:
+      - "5003:5003"
+    environment:
+      - USER_SERVICE_URL=http://user-service:5001
+      - PRODUCT_SERVICE_URL=http://product-service:5002
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5004
+      - SECRET_KEY=super-secret-key-123
+    depends_on:
+      - user-service
+      - product-service
+      - notification-service
+    networks:
+      - microservices-network
+
+  notification-service:
+    build: ./services/notification-service
+    ports:
+      - "5004:5004"
+    environment:
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USER=noreply@example.com
+      - SMTP_PASSWORD=smtp-password-123
+    networks:
+      - microservices-network
+
+  mongodb:
+    image: mongo:5.0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
