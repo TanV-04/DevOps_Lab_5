@@ -1,23 +1,18 @@
-# Use official Python base image
+# Use official Python image as base
 FROM python:3.11-slim
 
 # Set working directory
 WORKDIR /app
 
-# Copy requirements first to leverage Docker cache
-COPY LAB_PROJ_1/requirements.txt .
-
-# Install dependencies
-RUN python -m venv venv && \
-    . venv/bin/activate && \
-    pip install --upgrade pip && \
-    pip install -r requirements.txt
+# Copy requirements and install
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy app code
-COPY LAB_PROJ_1/ .
+COPY app.py .
 
 # Expose port
 EXPOSE 8000
 
-# Run the app
-CMD ["sh", "-c", ". venv/bin/activate && uvicorn app:app --host 0.0.0.0 --port 8000"]
+# Command to run the API
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
