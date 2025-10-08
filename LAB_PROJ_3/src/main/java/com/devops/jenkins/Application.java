@@ -1,6 +1,5 @@
 package com.devops.jenkins;
 
-import java.util.List;
 import java.util.Scanner;
 
 public class Application {
