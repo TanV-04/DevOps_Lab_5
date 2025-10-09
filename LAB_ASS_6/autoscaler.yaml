@@ -1,0 +1,19 @@
+# This automatically adds more servers when busy
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: social-media-autoscaler
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: social-media-app
+  minReplicas: 2    # Always have at least 2 servers
+  maxReplicas: 10   # Never more than 10 servers
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70  # Add more servers when CPU hits 70%
