@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-config
+data:
+  database: "mydatabase"
+  mongo-init-script: |
+    db.createUser({
+      user: "admin",
+      pwd: "adminpass",
+      roles: [{ role: "readWrite", db: "mydatabase" }]
+    })

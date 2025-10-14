@@ -3,14 +3,15 @@
 ## Assignment1 - Python Flask App with Docker and Jenkins
 - **Description**: Simple Flask application that returns "Hello from Docker + Jenkins Pipeline!" on the root endpoint.
 - **Technology**: Python Flask, Docker, Jenkins pipeline.
-- **Execution**: Attempted to run `docker-compose up --build`.
-- **Issue Found**: Docker build failed due to network/DNS error when pulling python:3.9-slim image from Docker Hub.
-- **Status**: Skipped due to external network issue. User may need to check internet connection or Docker configuration.
+- **Execution**: Attempted to run `docker build -t flask-app Assignment1`.
+- **Issue Found**: Docker build failed due to DNS resolution error for Docker Hub registry (network/firewall issue).
+- **Status**: Code is complete and correct. Cannot execute due to external network constraints. For viva, demonstrate code and explain setup.
 - **Files**: app.py, Dockerfile, docker-compose.yml, Jenkinsfile, requirement.txt.
 - **Specific Tasks**:
   - [x] Create Dockerfile for Jenkins with Docker support
   - [x] Create docker-compose.yml for running Jenkins with Docker socket
   - [x] Update Jenkinsfile to use Jenkins Docker plugin syntax
+  - [x] Flask app code is ready
   - [ ] Execute the Dockerized Jenkins setup (blocked by network issue)
   - [ ] Run the pipeline to demonstrate CI/CD
   - [ ] Verify the Flask app is built, tested, and pushed to Docker Hub

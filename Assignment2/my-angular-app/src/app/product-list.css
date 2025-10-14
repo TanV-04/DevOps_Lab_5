@@ -1,0 +1,15 @@
+.product-list {
+  padding: 20px;
+}
+
+.product-item {
+  border: 1px solid #ddd;
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.product-name {
+  font-weight: bold;
+  color: #333;
+}

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  user-service-port: "3001"
+  product-service-port: "3002"
+  order-service-port: "3003"
+  gateway-port: "3000"
+  log-level: "info"

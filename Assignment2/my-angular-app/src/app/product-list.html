@@ -1,0 +1,25 @@
+<div class="product-list-container">
+  <h2>Product Inventory</h2>
+
+  <div class="stats">
+    <p>Total Products: {{ totalProducts() }}</p>
+    <p>Total Value: ${{ totalValue() }}</p>
+  </div>
+
+  <button class="add-btn" (click)="addProduct()">Add New Product</button>
+
+  <div class="product-grid">
+    @for (product of products(); track product.id) {
+      <div class="product-card">
+        <h3>{{ product.name }}</h3>
+        <p class="category">{{ product.category }}</p>
+        <p class="price">${{ product.price }}</p>
+        <button class="remove-btn" (click)="removeProduct(product.id)">Remove</button>
+      </div>
+    }
+  </div>
+
+  @if (products().length === 0) {
+    <p class="no-products">No products available.</p>
+  }
+</div>
