@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: ecommerce
+  labels:
+    app: order-service
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+        tier: backend
+    spec:
+      containers:
+      - name: order-service
+        image: hashicorp/http-echo:latest
+        ports:
+        - containerPort: 3002
+          name: http
+        args:
+          - "-text={\"service\":\"order-service\",\"status\":\"healthy\",\"orders\":[{\"id\":1,\"productId\":1,\"quantity\":2,\"status\":\"delivered\",\"total\":1998},{\"id\":2,\"productId\":2,\"quantity\":1,\"status\":\"shipped\",\"total\":699}]}"
+          - "-listen=:3002"
+        env:
+        - name: PORT
+          value: "3002"
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DB_NAME
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: password
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: app-secret
+              key: jwt-secret
+        - name: PRODUCT_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: PRODUCT_SERVICE_URL
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3002
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3002
+          initialDelaySeconds: 5
+          periodSeconds: 5

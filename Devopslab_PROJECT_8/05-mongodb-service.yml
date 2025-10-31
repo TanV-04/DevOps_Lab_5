@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service
+  namespace: ecommerce
+  labels:
+    app: mongodb
+    tier: database
+spec:
+  type: ClusterIP
+  selector:
+    app: mongodb
+  ports:
+  - protocol: TCP
+    port: 27017
+    targetPort: 27017
+    name: mongodb

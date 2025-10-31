@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: ecommerce
+data:
+  # Database Configuration
+  DB_HOST: "mongodb-service"
+  DB_PORT: "27017"
+  DB_NAME: "ecommerce"
+  
+  # Application Configuration
+  APP_ENV: "production"
+  LOG_LEVEL: "info"
+  
+  # Service URLs
+  PRODUCT_SERVICE_URL: "http://product-service:3001"
+  ORDER_SERVICE_URL: "http://order-service:3002"
+  
+  # Frontend Configuration
+  REACT_APP_API_URL: "http://localhost:30080"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: ecommerce
+data:
+  nginx.conf: |
+    server {
+        listen 80;
+        server_name localhost;
+        
+        root /usr/share/nginx/html;
+        index index.html;
+        
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+        
+        location /api/products {
+            proxy_pass http://product-service:3001;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+        
+        location /api/orders {
+            proxy_pass http://order-service:3002;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+    }
