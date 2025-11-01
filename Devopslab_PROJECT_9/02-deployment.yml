@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apache2-deployment
+  namespace: apache-server
+  labels:
+    app: apache2
+    tier: frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: apache2
+  template:
+    metadata:
+      labels:
+        app: apache2
+        tier: frontend
+    spec:
+      containers:
+      - name: apache2
+        image: httpd:2.4
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        volumeMounts:
+        - name: apache-config
+          mountPath: /usr/local/apache2/conf/httpd.conf
+          subPath: apache2.conf
+        - name: apache-html
+          mountPath: /usr/local/apache2/htdocs/index.html
+          subPath: index.html
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+      volumes:
+      - name: apache-config
+        configMap:
+          name: apache-config
+          items:
+          - key: apache2.conf
+            path: apache2.conf
+      - name: apache-html
+        configMap:
+          name: apache-config
+          items:
+          - key: index.html
+            path: index.html
