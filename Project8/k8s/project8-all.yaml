@@ -1,0 +1,238 @@
+# ---------------- NAMESPACE ----------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: project8
+
+---
+# ---------------- CONFIGMAP ----------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: project8
+data:
+  APP_ENV: "production"
+  APP_MESSAGE: "Project8 microservices"
+
+---
+# ---------------- SECRET ----------------
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secret
+  namespace: project8
+type: Opaque
+stringData:
+  API_KEY: "apikey123"
+
+---
+# ================= FRONTEND (Deployment + Service) =================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deploy
+  namespace: project8
+  labels:
+    app: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: frontend-service:1.0
+        imagePullPolicy: IfNotPresent
+        envFrom:
+        - configMapRef:
+            name: app-config
+        - secretRef:
+            name: app-secret
+        ports:
+        - containerPort: 3000
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: project8
+spec:
+  type: NodePort
+  selector:
+    app: frontend
+  ports:
+  - port: 3000
+    targetPort: 3000
+    nodePort: 30001
+
+---
+# ================= BACKEND (Deployment + Service) =================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deploy
+  namespace: project8
+  labels:
+    app: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: backend-service:1.0
+        imagePullPolicy: IfNotPresent
+        envFrom:
+        - configMapRef:
+            name: app-config
+        - secretRef:
+            name: app-secret
+        ports:
+        - containerPort: 5000
+        readinessProbe:
+          httpGet:
+            path: /api
+            port: 5000
+          initialDelaySeconds: 3
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: project8
+spec:
+  type: ClusterIP
+  selector:
+    app: backend
+  ports:
+  - port: 5000
+    targetPort: 5000
+
+---
+# ================= AUTH (Deployment + Service) =================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-deploy
+  namespace: project8
+  labels:
+    app: auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      containers:
+      - name: auth
+        image: auth-service:1.0
+        imagePullPolicy: IfNotPresent
+        envFrom:
+        - configMapRef:
+            name: app-config
+        - secretRef:
+            name: app-secret
+        ports:
+        - containerPort: 8000
+        readinessProbe:
+          httpGet:
+            path: /login
+            port: 8000
+          initialDelaySeconds: 3
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: project8
+spec:
+  type: ClusterIP
+  selector:
+    app: auth
+  ports:
+  - port: 8000
+    targetPort: 8000
+
+---
+# ================= DATA (Deployment + Service) =================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-deploy
+  namespace: project8
+  labels:
+    app: data
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data
+  template:
+    metadata:
+      labels:
+        app: data
+    spec:
+      containers:
+      - name: data
+        image: data-service:1.0
+        imagePullPolicy: IfNotPresent
+        envFrom:
+        - configMapRef:
+            name: app-config
+        - secretRef:
+            name: app-secret
+        ports:
+        - containerPort: 7000
+        readinessProbe:
+          httpGet:
+            path: /data
+            port: 7000
+          initialDelaySeconds: 3
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-service
+  namespace: project8
+spec:
+  type: ClusterIP
+  selector:
+    app: data
+  ports:
+  - port: 7000
+    targetPort: 7000
