@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: apache-configmap
+  labels:
+    app: apache
+data:
+  index.html: |
+    <html>
+      <head>
+        <title>Apache Server on Kubernetes</title>
+      </head>
+      <body style="font-family: Arial; background-color: #f4f4f4; text-align: center;">
+        <h1>Welcome to Apache Server on Kubernetes!</h1>
+        <p>Deployed by <b>Rohit</b> using Docker Desktop and kubectl 😎</p>
+      </body>
+    </html>
