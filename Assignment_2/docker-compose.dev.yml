@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  angular-app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./angular-app:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm start

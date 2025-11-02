@@ -1,0 +1,89 @@
+pipeline {
+    agent none  // No global agent, specify per stage
+
+    tools {
+        maven 'M3'
+        jdk 'jdk17'
+    }
+
+    environment {
+        DOCKER_REGISTRY = 'index.docker.io/tijilparakh04'
+        IMAGE_NAME = 'java-demo-app'
+        VERSION = '1.0.0'
+    }
+
+    stages {
+        stage('Checkout') {
+            agent any
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/tijilparakh04/DevOps_Lab_5.git'
+            }
+        }
+
+        stage('Build') {
+            agent { label 'maven-slave1' }  // Compile on slave1
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
+
+        stage('Test') {
+            agent { label 'maven-slave2' }  // Test on slave2
+            steps {
+                sh 'mvn test'
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('Package') {
+            agent any
+            steps {
+                sh 'mvn package -DskipTests'
+            }
+        }
+
+        stage('Build Docker Image') {
+            agent any
+            steps {
+                script {
+                    docker.build("${IMAGE_NAME}:${VERSION}")
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            agent any
+            steps {
+                script {
+                    docker.withRegistry('https://${DOCKER_REGISTRY}', 'docker-credentials') {
+                        docker.image("${IMAGE_NAME}:${VERSION}").push()
+                    }
+                }
+            }
+        }
+
+        stage('Deploy') {
+            agent any
+            steps {
+                echo 'Deploying application...'
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}

@@ -1,0 +1,51 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Checkout from the correct branch and path
+                git branch: 'main',
+                    url: 'https://github.com/tijilparakh04/devops-lab.git'
+            }
+        }
+        stage('Build') {
+            steps {
+                script {
+                    def dockerImage = "my-nodejs-app:${env.BUILD_ID}"
+                    // Change directory into Assignment 1 before building
+                    dir('Assignment_1') {
+                        sh "docker build -t ${dockerImage} ."
+                    }
+                }
+            }
+        }
+        stage('Test') {
+            steps {
+                script {
+                    def dockerImage = "my-nodejs-app:${env.BUILD_ID}"
+                    sh "docker run -d --name test-container ${dockerImage}"
+                    sleep(5)
+                    sh "docker logs test-container"
+                    sh "docker stop test-container"
+                    sh "docker rm test-container"
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                script {
+                    def dockerImage = "my-nodejs-app:${env.BUILD_ID}"
+                    sh "docker stop my-app-instance || true"
+                    sh "docker rm my-app-instance || true"
+                    sh "docker run -d --name my-app-instance -p 8000:3000 ${dockerImage}"
+                }
+            }
+        }
+    }
+    post {
+        always {
+            sh 'echo "Pipeline finished."'
+        }
+    }
+}
