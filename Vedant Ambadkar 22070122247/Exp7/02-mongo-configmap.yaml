@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-express-config
+  namespace: devops-mongo
+data:
+  ME_CONFIG_MONGODB_SERVER: "mongodb"       # service name for MongoDB
+  ME_CONFIG_MONGODB_PORT: "27017"
+  # You can add non-sensitive UI config here
+  ME_CONFIG_SITE_BASEURL: "/"
