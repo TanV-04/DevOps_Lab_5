@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-express-config
+data:
+  me_config_mongodb_port: "27017"
+  me_config_site_baseurl: "/mongo-express"

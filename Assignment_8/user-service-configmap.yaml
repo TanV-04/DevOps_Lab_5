@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-service-config
+data:
+  profile: "prod"
+  db_url: "mongodb://mongo-service:27017/userdb"
