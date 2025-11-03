@@ -1,0 +1,5 @@
+- initialize a new Node.js project. this step creates the package.json
+- install Express.js for the to build the API for the application.
+- create subfolders representing each microservice and add index.js files for each. make sure express and node are both installed for each service
+- create a Dockerfile for each service and create and img and run each container
+- create a yaml file containing all Kubernetes manifests.
