@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Newsfeed App</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f3f3f3; margin: 40px; }
+        h1 { color: #333; }
+        form { margin-bottom: 20px; }
+        input, textarea { width: 100%; padding: 10px; margin: 5px 0; border-radius: 5px; border: 1px solid #ccc; }
+        button { background-color: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+        .post { background-color: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; }
+        .post h2 { margin: 0; color: #222; }
+    </style>
+</head>
+<body>
+    <h1>📰 Newsfeed App</h1>
+
+    <form action="/add" method="POST">
+        <input type="text" name="title" placeholder="Enter post title" required>
+        <textarea name="content" placeholder="Enter post content" required></textarea>
+        <button type="submit">Add Post</button>
+    </form>
+
+    {% for post in posts %}
+        <div class="post">
+            <h2>{{ post.title }}</h2>
+            <p>{{ post.content }}</p>
+        </div>
+    {% endfor %}
+</body>
+</html>
+
