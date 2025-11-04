@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-express-config
+  namespace: mongo-demo
+data:
+  ME_CONFIG_SITE_BASEURL: "/"
+  ME_CONFIG_OPTIONS_DISPLAY_STARTUP_LOGS: "true"
+  ME_CONFIG_MONGODB_ENABLE_ADMIN: "true"
+  ME_CONFIG_MONGODB_SERVER: "mongodb-service"
