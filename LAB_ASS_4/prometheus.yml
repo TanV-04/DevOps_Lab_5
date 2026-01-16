@@ -1,0 +1,35 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'retail-app'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['retail-app:8080']
+    scrape_interval: 30s
+
+  - job_name: 'retail-app-replica1'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['retail-app-replica1:8080']
+    scrape_interval: 30s
+
+  - job_name: 'retail-app-replica2'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['retail-app-replica2:8080']
+    scrape_interval: 30s
+
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:80']
+    scrape_interval: 30s

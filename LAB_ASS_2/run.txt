@@ -1,0 +1,5 @@
+docker-compose -f docker-compose.dev.yml up -d
+
+# to close
+
+docker-compose -f docker-compose.dev.yml down

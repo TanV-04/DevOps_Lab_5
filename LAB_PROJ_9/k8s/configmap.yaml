@@ -1,0 +1,280 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: apache-html
+  labels:
+    app: apache-server
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Apache2 • Kubernetes</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #ffffff;
+                line-height: 1.6;
+                overflow-x: hidden;
+            }
+            
+            .container {
+                max-width: 800px;
+                padding: 60px 40px;
+                text-align: center;
+                position: relative;
+            }
+            
+            .floating-elements {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+                overflow: hidden;
+            }
+            
+            .floating-elements::before,
+            .floating-elements::after {
+                content: '';
+                position: absolute;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.1);
+                animation: float 6s ease-in-out infinite;
+            }
+            
+            .floating-elements::before {
+                width: 100px;
+                height: 100px;
+                top: 20%;
+                left: 10%;
+                animation-delay: 0s;
+            }
+            
+            .floating-elements::after {
+                width: 60px;
+                height: 60px;
+                top: 60%;
+                right: 15%;
+                animation-delay: 3s;
+            }
+            
+            @keyframes float {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-20px); }
+            }
+            
+            .hero-badge {
+                display: inline-block;
+                background: rgba(255, 255, 255, 0.15);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                padding: 8px 20px;
+                border-radius: 25px;
+                font-size: 14px;
+                font-weight: 500;
+                margin-bottom: 30px;
+                letter-spacing: 0.5px;
+            }
+            
+            h1 {
+                font-size: clamp(3rem, 8vw, 5rem);
+                font-weight: 700;
+                margin-bottom: 20px;
+                background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                letter-spacing: -2px;
+            }
+            
+            .subtitle {
+                font-size: 1.25rem;
+                opacity: 0.9;
+                margin-bottom: 50px;
+                font-weight: 300;
+            }
+            
+            .cards-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 25px;
+                margin: 50px 0;
+            }
+            
+            .card {
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(15px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 20px;
+                padding: 35px 30px;
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .card:hover {
+                transform: translateY(-5px);
+                background: rgba(255, 255, 255, 0.15);
+                border-color: rgba(255, 255, 255, 0.3);
+            }
+            
+            .card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 4px;
+                background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1);
+                border-radius: 20px 20px 0 0;
+            }
+            
+            .card-icon {
+                font-size: 2.5rem;
+                margin-bottom: 20px;
+                display: block;
+            }
+            
+            .card h3 {
+                font-size: 1.3rem;
+                margin-bottom: 15px;
+                font-weight: 600;
+            }
+            
+            .card p {
+                opacity: 0.85;
+                line-height: 1.6;
+            }
+            
+            .status-indicator {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                background: rgba(34, 197, 94, 0.2);
+                border: 1px solid rgba(34, 197, 94, 0.3);
+                padding: 15px 25px;
+                border-radius: 50px;
+                margin-top: 40px;
+                font-weight: 500;
+            }
+            
+            .status-dot {
+                width: 12px;
+                height: 12px;
+                background: #22c55e;
+                border-radius: 50%;
+                animation: pulse 2s infinite;
+            }
+            
+            @keyframes pulse {
+                0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+                70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+            }
+            
+            .footer-text {
+                margin-top: 50px;
+                opacity: 0.7;
+                font-size: 0.9rem;
+            }
+            
+            @media (max-width: 768px) {
+                .container {
+                    padding: 40px 20px;
+                }
+                
+                .cards-grid {
+                    grid-template-columns: 1fr;
+                    gap: 20px;
+                }
+                
+                .card {
+                    padding: 25px 20px;
+                }
+            }
+            
+            /* Smooth entrance animation */
+            .container > * {
+                animation: fadeInUp 0.8s ease forwards;
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            
+            .hero-badge { animation-delay: 0.1s; }
+            h1 { animation-delay: 0.2s; }
+            .subtitle { animation-delay: 0.3s; }
+            .cards-grid { animation-delay: 0.4s; }
+            .status-indicator { animation-delay: 0.5s; }
+            .footer-text { animation-delay: 0.6s; }
+            
+            @keyframes fadeInUp {
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="floating-elements"></div>
+            
+            <div class="hero-badge">
+                🚀 Production Ready
+            </div>
+            
+            <h1>Apache Server</h1>
+            <p class="subtitle">Running seamlessly on Kubernetes</p>
+            
+            <div class="cards-grid">
+                <div class="card">
+                    <span class="card-icon">⚡</span>
+                    <h3>Server Status</h3>
+                    <p><strong>Version:</strong> Apache/2.4<br>
+                    <strong>Platform:</strong> Kubernetes Pod<br>
+                    <strong>Uptime:</strong> Active & Running</p>
+                </div>
+                
+                <div class="card">
+                    <span class="card-icon">🔧</span>
+                    <h3>Configuration</h3>
+                    <p><strong>Container:</strong> httpd:2.4<br>
+                    <strong>Service:</strong> NodePort<br>
+                    <strong>Replicas:</strong> 3 Instances</p>
+                </div>
+                
+                <div class="card">
+                    <span class="card-icon">🌐</span>
+                    <h3>Network</h3>
+                    <p><strong>External Port:</strong> 30085<br>
+                    <strong>Load Balanced:</strong> Yes<br>
+                    <strong>SSL Ready:</strong> Configurable</p>
+                </div>
+            </div>
+            
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>Deployment Successful</span>
+            </div>
+            
+            <p class="footer-text">
+                Powered by Kubernetes • Container Orchestration Platform
+            </p>
+        </div>
+    </body>
+    </html>

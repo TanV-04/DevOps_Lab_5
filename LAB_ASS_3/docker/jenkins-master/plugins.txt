@@ -1,0 +1,42 @@
+# Jenkins plugins to install
+# Core pipeline and build plugins
+workflow-aggregator:2.6
+pipeline-stage-view:2.25
+pipeline-rest-api:2.25
+pipeline-build-step:2.18
+
+# Git and SCM plugins
+git:4.8.3
+github:1.37.0
+github-branch-source:2.11.4
+
+# Build and test plugins
+maven-plugin:3.19
+junit:1.63
+jacoco:3.3.2
+
+# Distributed build plugins
+ssh-slaves:1.806.va_3d2404e86b_a
+swarm:3.25
+
+# Notification plugins
+email-ext:2.93
+mailer:448.v5b_97805e3767
+
+# UI and dashboard plugins
+build-pipeline-plugin:1.5.8
+dashboard-view:2.18.1
+green-balls:1.15.1
+
+# Utilities
+timestamper:1.17
+build-timeout:1.27
+ant:1.13
+
+# Security plugins
+matrix-auth:3.1.5
+role-strategy:3.2.0
+
+# Node and agent management
+ssh-agent:295.v9ca_a_1c7cc3a_a_
+node-and-label-parameter:1.10.3
